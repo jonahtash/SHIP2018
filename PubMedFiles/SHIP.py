@@ -1,0 +1,213 @@
+import os
+from multiprocessing import Pool
+from datetime import datetime
+import subprocess
+import csv
+import urllib.request
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.converter import TextConverter
+from pdfminer.layout import LAParams
+from pdfminer.pdfpage import PDFPage
+from io import StringIO
+import unicodedata
+import ctypes
+#func to process id in ruby script
+def process_line(line):
+    print(line.strip())
+    p = subprocess.Popen("ruby pubmedid2pdf.rb "+line,shell = False,
+                         stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    p.wait()
+    if "failed" in str(p.stderr.read()):
+        return line
+    return ""
+
+#run ruby script on list of ids at file_path and output failed ids
+#to kickback_loc. Optional num_threads number of threads to run- default 10
+def run_id_ruby(file_path,kickback_path,num_threads=10):
+    start = datetime.now()
+    pool = Pool(num_threads)
+    with open(file_path) as source_file:
+        results = pool.map(process_line, source_file)
+    with open(kickback_path,'w') as f:
+        for i in results:
+            f.write(i)
+    return datetime.now()-start
+
+#make list of PubMed ids from PubMed csv
+def get_pmedid_csv(csv_file_path,output_path):
+    out = open(output_path,'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        re = csv.reader(csvf, delimiter=',')
+        for row in re:
+            out.write(row[9]+"\n")
+    out.close()
+
+#Take PubMed csv at csv_file_path.
+#Make list of entries with PMCID format "PMCID+PUBMEDID" at pmc_path.
+#Make list of entries with no PMCID at nopmc_path.
+def get_pmcid_csv(csv_file_path,pmc_path,nopmc_path):
+    pmc = open(pmc_path,'w')
+    nopmc = open(nopmc_path,'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        re = csv.reader(csvf, delimiter=',')
+        for row in re:
+            if "PMCID:" in row[7]:
+                pmc.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
+            else:
+                nopmc.write(row[9]+"\n")
+    pmc.close()
+    nopmc.close()
+
+#Download pdf at download_url from PMC website.
+#Save pdf to folder at pdf_output_dir and name pdf pmed_id.
+#Output failed downloads to kickback_path txt.
+def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
+    kick = open(kickback_path,'a')
+    try:
+        headers = {}
+        headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        req = urllib.request.Request(download_url, headers = headers)
+        resp = urllib.request.urlopen(req)
+        with open("./"+pdf_output_dir+pmed_id+".pdf",'wb') as f:
+            f.write(resp.read())
+            f.close()
+    except Exception as e:
+        print(str(e))
+        kick.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+    kick.close()
+
+#PREREQ: id file in format "PMCID+PUBMEDID".
+#Download pdfs of entries in txt at id_file_path.
+#Downloads pdfs to pdf_output_dir.
+#Output failed downloads to kickback_path.
+def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
+    if pdf_output_dir[-1]!="/":
+        pdf_output_dir = pdf_output_dir+"/"
+    with open(id_file_path,'r') as f:
+        for line in f:
+            a = line.split("+")
+            download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                          a[1].strip(),pdf_output_dir,kickback_path)
+            print(a[0]+" "+a[1].strip())
+
+#helper func for threaded dl
+def unpack(s):
+    a = s.split("+")
+    print(a[0]+" "+a[1].strip())
+    download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                        a[1].strip(),a[2],a[3])
+
+#Get_from_pmcid threaded version.
+#Default 10 threads.
+def get_from_pmcid_thread(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
+    if pdf_output_dir[-1]!="/":
+        pdf_output_dir = pdf_output_dir+"/"
+    pool = Pool(num_thread)
+    pack = []
+    for line in open(id_file_path,'r'):
+        pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
+    results = pool.map(unpack,pack)
+
+#Counts the number of txts in id_txt_list.
+#Counts the number of pdfs in pdf_dir_list.
+#Returns the sum of pdf and txts: sum should equal 96961.
+def get_count(id_txt_list, pdf_dir_list):
+    c=0
+    for txt in id_txt_list:
+        c+= sum(1 for line in open(txt))
+    for d in pdf_dir_list:
+        c+=len(os.listdir(d))
+    return c
+
+#Add PMCID to PUBMEDIDs in pmed_id_path txt.
+#Output results in format "PMCID+PUBMEDID" to output_path.
+def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
+    out = open(output_path,'w')
+    for i in open(pmed_id_path,'r'):
+        print(i.strip())
+        with open(csv_file_path, encoding='utf-8') as csvf:
+               re = csv.reader(csvf, delimiter=',')
+               for row in re:
+                   if(row[9] in i):
+                       print("good")
+                       out.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
+                       break
+    out.close()
+
+
+       
+def convert_pdf_to_txt(path):
+    rsrcmgr = PDFResourceManager()
+    retstr = StringIO()
+    codec = 'utf-8'
+    laparams = LAParams()
+    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+    fp = open(path, 'rb')
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    password = ""
+    maxpages = 0
+    caching = True
+    pagenos=set()
+
+    for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password,caching=caching, check_extractable=True):
+        interpreter.process_page(page)
+
+    text = retstr.getvalue()
+
+    fp.close()
+    device.close()
+    retstr.close()
+    return text
+
+def extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_bad):
+    f = open(output_path, "w")
+    text= convert_pdf_to_txt(pdf_path)
+    lineiterator = iter(text.splitlines())
+    for line in lineiterator:
+        if len(unicodedata.normalize("NFD",line.casefold()).replace("  "," ").strip()) > 0:
+            if any_rev(sec_header_good,unicodedata.normalize("NFD",line.casefold()).replace("  "," ")):
+                print(line+"******************")
+                print(next(lineiterator))
+                for i in range(1000):
+                    l = next(lineiterator)
+                    print(l)
+                    if not any_rev(sec_header_bad,unicodedata.normalize("NFD",l.casefold()).replace("  "," ")):
+                        f.write(l+"\n")
+                    else:  
+                        break
+                break
+    f.close()
+def any_rev(array,string):
+    for i in array:
+        if i in string:
+            return True
+    return False
+def unpack_pdfextract(s):
+    a = s.split(",")
+    print(a[0])
+    extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
+def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):
+    if pdf_dir[-1]!= "/":
+        pdf_dir = pdf_dir+"/"
+    if output_dir[-1] != "/":
+        output_dir = output_dir+"/"
+    pool = Pool(num_threads)
+    pack = []
+    for f in os.listdir(pdf_dir):
+        if f.endswith(".pdf"):
+            pack.append(pdf_dir+f+","+output_dir+f.split(".pdf")[0]+".txt,"+'$'.join(sec_header_good)+","+'$'.join(sec_header_bad))
+    results = pool.map(unpack_pdfextract, pack,4)
+def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
+    if pdf_dir[-1]!= "/":
+        pdf_dir = pdf_dir+"/"
+    if output_dir[-1] != "/":
+        output_dir = output_dir+"/"
+    for f in os.listdir(pdf_dir):
+        if f.endswith(".pdf"):
+            print(pdf_dir+f)
+            extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
+if __name__ == '__main__':
+    good = ['materials and methods','experimental']
+    bad = ['results',"discussions"]
+    #get_materials_folder("./pcTest/","./OutSecs",good,bad)
+    get_materials_folder_thread("./pcTest/","./OutSecs",good,bad,num_threads=5)
