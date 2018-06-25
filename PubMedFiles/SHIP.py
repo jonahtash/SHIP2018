@@ -121,7 +121,11 @@ def unpack(s):
     print(a[0]+" "+a[1].strip())
     download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
                         a[1].strip(),a[2],a[3])
-
+def unpack_error(s):
+    a = s.split("+")
+    print(a[0]+" "+a[1].strip())
+    download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                        a[1].strip(),a[2])
 #Get_from_pmcid threaded version.
 #Default 10 threads.
 def get_from_pmcid_thread(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
@@ -133,6 +137,15 @@ def get_from_pmcid_thread(id_file_path,pdf_output_dir,kickback_path,num_thread=1
         pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
     results = pool.map(unpack,pack)
 
+def get_error_thread(id_file_path,pdf_output_dir,num_thread=2):
+    if pdf_output_dir[-1]!="/":
+        pdf_output_dir = pdf_output_dir+"/"
+    pool = Pool(num_thread)
+    pack = []
+    for line in open(id_file_path,'r'):
+        pack.append(line+"+"+pdf_output_dir)
+    results = pool.map(unpack_error,pack)
+    
 #Counts the number of txts in id_txt_list.
 #Counts the number of pdfs in pdf_dir_list.
 #Returns the sum of pdf and txts: sum should equal 96961.
@@ -232,4 +245,4 @@ def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
             print(pdf_dir+f)
             extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
 if __name__ == '__main__':
-    download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5756475/pdf/","7",".")
+    get_error_thread("../../SHIPFiles/PmedThread/id_list_pcmid_test.txt",".",num_thread=2)
