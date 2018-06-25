@@ -76,6 +76,31 @@ def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
         kick.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
     kick.close()
 
+def download_pdf_errors(download_url,pmed_id,pdf_output_dir):
+    e404 = open("Error_404.txt",'a')
+    e403_ban = open("Error_403_ipBan.txt",'a')
+    e403_rem = open("Error_403_rem.txt",'a')
+    try:
+        headers = {}
+        headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        req = urllib.request.Request(download_url, headers = headers)
+        resp = urllib.request.urlopen(req)
+        with open("./"+pdf_output_dir+pmed_id+".pdf",'wb') as f:
+            f.write(resp.read())
+            f.close()
+    except Exception as e:
+        print(str(e))
+        if e.code == 404:
+            e404.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+        if e.code == 403:
+            if "Internet connection (IP address) was used to download content in bulk" in str(e.read()):
+                e403_ban.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+            else:
+                e403_rem.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+    e404.close()
+    e403_ban.close()
+    e403_rem.close()
+
 #PREREQ: id file in format "PMCID+PUBMEDID".
 #Download pdfs of entries in txt at id_file_path.
 #Downloads pdfs to pdf_output_dir.
@@ -207,7 +232,4 @@ def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
             print(pdf_dir+f)
             extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
 if __name__ == '__main__':
-    good = ['materials and methods','experimental']
-    bad = ['results',"discussions"]
-    #get_materials_folder("./pcTest/","./OutSecs",good,bad)
-    get_materials_folder_thread("./pcTest/","./OutSecs",good,bad,num_threads=5)
+    download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5756475/pdf/","7",".")
