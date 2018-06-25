@@ -11,6 +11,8 @@ from pdfminer.pdfpage import PDFPage
 from io import StringIO
 import unicodedata
 import ctypes
+import requests
+
 #func to process id in ruby script
 def process_line(line):
     print(line.strip())
@@ -220,10 +222,12 @@ def any_rev(array,string):
         if i in string:
             return True
     return False
+
 def unpack_pdfextract(s):
     a = s.split(",")
     print(a[0])
     extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
+
 def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):
     if pdf_dir[-1]!= "/":
         pdf_dir = pdf_dir+"/"
@@ -235,6 +239,7 @@ def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_ba
         if f.endswith(".pdf"):
             pack.append(pdf_dir+f+","+output_dir+f.split(".pdf")[0]+".txt,"+'$'.join(sec_header_good)+","+'$'.join(sec_header_bad))
     results = pool.map(unpack_pdfextract, pack,4)
+
 def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
     if pdf_dir[-1]!= "/":
         pdf_dir = pdf_dir+"/"
@@ -244,5 +249,26 @@ def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
         if f.endswith(".pdf"):
             print(pdf_dir+f)
             extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
+def post_science_parse(s):
+    a=s.split("+")
+    print(a[0])
+    try:
+        with open(a[0], 'rb') as f:
+            r = requests.post('http://localhost:8080/v1', files={a[0]: f})
+            open(a[1]+a[0].split('/')[-1][0:-4]+'.json','w',encoding='utf-8').write(r.text)
+    except Exception as e:
+        print("ERROR "+str(e))
+
+def get_pdf_json(pdf_dir,out_dir,num_thread=2):
+    if pdf_dir[-1]!="/":
+        pdf_dir = pdf_dir+"/"
+    if out_dir[-1]!="/":
+        out_dir = out_dir+"/"
+    pool = Pool(num_thread)
+    pack = []
+    for line in os.listdir(pdf_dir):
+        pack.append(pdf_dir+line+"+"+out_dir)
+    results = pool.map(post_science_parse,pack)
+
 if __name__ == '__main__':
-    get_error_thread("../../SHIPFiles/PmedThread/id_list_pcmid_test.txt",".",num_thread=2)
+    get_pdf_json('pcTest','OutSecs',num_thread=6)
