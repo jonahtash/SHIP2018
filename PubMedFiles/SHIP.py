@@ -269,6 +269,15 @@ def get_pdf_json(pdf_dir,out_dir,num_thread=2):
     for line in os.listdir(pdf_dir):
         pack.append(pdf_dir+line+"+"+out_dir)
     results = pool.map(post_science_parse,pack)
+def remove_dupes_txt(in_path, out_path):
+    lines_seen = set()
+    outfile = open(out_path, "w")
+    for line in open(in_path, "r"):
+        if line not in lines_seen:
+            outfile.write(line)
+            lines_seen.add(line)
+    outfile.close()
+
 
 if __name__ == '__main__':
-    get_pdf_json('pcTest','OutSecs',num_thread=6)
+    remove_dupes_txt('Error_403_ipBan2.txt', 'ids_no_dupes.txt')
