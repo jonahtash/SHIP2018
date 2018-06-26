@@ -13,6 +13,10 @@ import unicodedata
 import ctypes
 import requests
 
+
+"""BEGIN RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
+"""*********************************************"""
+
 #func to process id in ruby script
 def process_line(line):
     print(line.strip())
@@ -35,34 +39,16 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
             f.write(i)
     return datetime.now()-start
 
-#make list of PubMed ids from PubMed csv
-def get_pmedid_csv(csv_file_path,output_path):
-    out = open(output_path,'w')
-    with open(csv_file_path, encoding='utf-8') as csvf:
-        re = csv.reader(csvf, delimiter=',')
-        for row in re:
-            out.write(row[9]+"\n")
-    out.close()
+"""********************************************"""
+"""END RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
 
-#Take PubMed csv at csv_file_path.
-#Make list of entries with PMCID format "PMCID+PUBMEDID" at pmc_path.
-#Make list of entries with no PMCID at nopmc_path.
-def get_pmcid_csv(csv_file_path,pmc_path,nopmc_path):
-    pmc = open(pmc_path,'w')
-    nopmc = open(nopmc_path,'w')
-    with open(csv_file_path, encoding='utf-8') as csvf:
-        re = csv.reader(csvf, delimiter=',')
-        for row in re:
-            if "PMCID:" in row[7]:
-                pmc.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
-            else:
-                nopmc.write(row[9]+"\n")
-    pmc.close()
-    nopmc.close()
 
+"""BEGIN PMC DOWLOAD FUNCTIONS"""
+"""***************************"""
 #Download pdf at download_url from PMC website.
 #Save pdf to folder at pdf_output_dir and name pdf pmed_id.
 #Output failed downloads to kickback_path txt.
+
 def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
     kick = open(kickback_path,'a')
     try:
@@ -77,6 +63,38 @@ def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
         print(str(e))
         kick.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
     kick.close()
+
+
+#PREREQ: id file in format "PMCID+PUBMEDID".
+#Download pdfs of entries in txt at id_file_path.
+#Downloads pdfs to pdf_output_dir.
+#Output failed downloads to kickback_path.
+def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
+    if pdf_output_dir[-1]!="/":
+        pdf_output_dir = pdf_output_dir+"/"
+    with open(id_file_path,'r') as f:
+        for line in f:
+            a = line.split("+")
+            download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                          a[1].strip(),pdf_output_dir,kickback_path)
+            print(a[0]+" "+a[1].strip())
+
+#helper func for threaded dl
+def unpack(s):
+    a = s.split("+")
+    print(a[0]+" "+a[1].strip())
+    download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                        a[1].strip(),a[2],a[3])
+#Get_from_pmcid threaded version.
+#Default 10 threads.
+def get_from_pmcid_thread(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
+    if pdf_output_dir[-1]!="/":
+        pdf_output_dir = pdf_output_dir+"/"
+    pool = Pool(num_thread)
+    pack = []
+    for line in open(id_file_path,'r'):
+        pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
+    results = pool.map(unpack,pack)
 
 def download_pdf_errors(download_url,pmed_id,pdf_output_dir):
     e404 = open("Error_404.txt",'a')
@@ -103,41 +121,11 @@ def download_pdf_errors(download_url,pmed_id,pdf_output_dir):
     e403_ban.close()
     e403_rem.close()
 
-#PREREQ: id file in format "PMCID+PUBMEDID".
-#Download pdfs of entries in txt at id_file_path.
-#Downloads pdfs to pdf_output_dir.
-#Output failed downloads to kickback_path.
-def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
-    if pdf_output_dir[-1]!="/":
-        pdf_output_dir = pdf_output_dir+"/"
-    with open(id_file_path,'r') as f:
-        for line in f:
-            a = line.split("+")
-            download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
-                          a[1].strip(),pdf_output_dir,kickback_path)
-            print(a[0]+" "+a[1].strip())
-
-#helper func for threaded dl
-def unpack(s):
-    a = s.split("+")
-    print(a[0]+" "+a[1].strip())
-    download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
-                        a[1].strip(),a[2],a[3])
 def unpack_error(s):
     a = s.split("+")
     print(a[0]+" "+a[1].strip())
     download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
                         a[1].strip(),a[2])
-#Get_from_pmcid threaded version.
-#Default 10 threads.
-def get_from_pmcid_thread(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
-    if pdf_output_dir[-1]!="/":
-        pdf_output_dir = pdf_output_dir+"/"
-    pool = Pool(num_thread)
-    pack = []
-    for line in open(id_file_path,'r'):
-        pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
-    results = pool.map(unpack,pack)
 
 def get_error_thread(id_file_path,pdf_output_dir,num_thread=2):
     if pdf_output_dir[-1]!="/":
@@ -148,16 +136,116 @@ def get_error_thread(id_file_path,pdf_output_dir,num_thread=2):
         pack.append(line+"+"+pdf_output_dir)
     results = pool.map(unpack_error,pack)
     
-#Counts the number of txts in id_txt_list.
-#Counts the number of pdfs in pdf_dir_list.
-#Returns the sum of pdf and txts: sum should equal 96961.
-def get_count(id_txt_list, pdf_dir_list):
-    c=0
-    for txt in id_txt_list:
-        c+= sum(1 for line in open(txt))
-    for d in pdf_dir_list:
-        c+=len(os.listdir(d))
-    return c
+"""*************************"""
+"""END PMC DOWLOAD FUNCTIONS"""
+
+
+"""BEGIN MATERIALS SECTION PARSER FUNCTIONS"""
+"""****************************************"""
+def extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_bad):
+    f = open(output_path, "w")
+    text= convert_pdf_to_txt(pdf_path)
+    lineiterator = iter(text.splitlines())
+    for line in lineiterator:
+        if len(unicodedata.normalize("NFD",line.casefold()).replace("  "," ").strip()) > 0:
+            if any_rev(sec_header_good,unicodedata.normalize("NFD",line.casefold()).replace("  "," ")):
+                print(line+"******************")
+                print(next(lineiterator))
+                for i in range(1000):
+                    l = next(lineiterator)
+                    print(l)
+                    if not any_rev(sec_header_bad,unicodedata.normalize("NFD",l.casefold()).replace("  "," ")):
+                        f.write(l+"\n")
+                    else:  
+                        break
+                break
+    f.close()
+
+def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
+    if pdf_dir[-1]!= "/":
+        pdf_dir = pdf_dir+"/"
+    if output_dir[-1] != "/":
+        output_dir = output_dir+"/"
+    for f in os.listdir(pdf_dir):
+        if f.endswith(".pdf"):
+            print(pdf_dir+f)
+            extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
+
+def unpack_pdfextract(s):
+    a = s.split(",")
+    print(a[0])
+    extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
+
+def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):
+    if pdf_dir[-1]!= "/":
+        pdf_dir = pdf_dir+"/"
+    if output_dir[-1] != "/":
+        output_dir = output_dir+"/"
+    pool = Pool(num_threads)
+    pack = []
+    for f in os.listdir(pdf_dir):
+        if f.endswith(".pdf"):
+            pack.append(pdf_dir+f+","+output_dir+f.split(".pdf")[0]+".txt,"+'$'.join(sec_header_good)+","+'$'.join(sec_header_bad))
+    results = pool.map(unpack_pdfextract, pack,4)
+
+"""**************************************"""
+"""END MATERIALS SECTION PARSER FUNCTIONS"""
+
+
+"""BEGIN SCIENCE-PARSE SERVER FUNCTIONS"""
+"""*****************************"""
+
+def post_science_parse(s):
+    a=s.split("+")
+    print(a[0])
+    try:
+        with open(a[0], 'rb') as f:
+            r = requests.post('http://localhost:8080/v1', files={a[0]: f})
+            open(a[1]+a[0].split('/')[-1][0:-4]+'.json','w',encoding='utf-8').write(r.text)
+    except Exception as e:
+        print("ERROR "+str(e))
+
+def get_pdf_json(pdf_dir,out_dir,num_thread=2):
+    if pdf_dir[-1]!="/":
+        pdf_dir = pdf_dir+"/"
+    if out_dir[-1]!="/":
+        out_dir = out_dir+"/"
+    pool = Pool(num_thread)
+    pack = []
+    for line in os.listdir(pdf_dir):
+        pack.append(pdf_dir+line+"+"+out_dir)
+    results = pool.map(post_science_parse,pack)
+
+"""***************************"""
+"""END SCIENCE-PARSE SERVER FUNCTIONS"""
+
+
+"""BEGIN CSV PARSING FUNCTIONS"""
+"""***************************"""
+#make list of PubMed ids from PubMed csv
+def get_pmedid_csv(csv_file_path,output_path):
+    out = open(output_path,'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        re = csv.reader(csvf, delimiter=',')
+        for row in re:
+            out.write(row[9]+"\n")
+    out.close()
+
+#Take PubMed csv at csv_file_path.
+#Make list of entries with PMCID format "PMCID+PUBMEDID" at pmc_path.
+#Make list of entries with no PMCID at nopmc_path.
+def get_pmcid_csv(csv_file_path,pmc_path,nopmc_path):
+    pmc = open(pmc_path,'w')
+    nopmc = open(nopmc_path,'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        re = csv.reader(csvf, delimiter=',')
+        for row in re:
+            if "PMCID:" in row[7]:
+                pmc.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
+            else:
+                nopmc.write(row[9]+"\n")
+    pmc.close()
+    nopmc.close()
 
 #Add PMCID to PUBMEDIDs in pmed_id_path txt.
 #Output results in format "PMCID+PUBMEDID" to output_path.
@@ -174,8 +262,39 @@ def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
                        break
     out.close()
 
+"""*************************"""
+"""END CSV PARSING FUNCTIONS"""
 
-       
+
+"""BEGIN UTILITY FUNCTIONS"""
+"""***********************"""
+
+def remove_dupes_txt(in_path, out_path):
+    lines_seen = set()
+    outfile = open(out_path, "w")
+    for line in open(in_path, "r"):
+        if line not in lines_seen:
+            outfile.write(line)
+            lines_seen.add(line)
+    outfile.close()
+
+#Counts the number of txts in id_txt_list.
+#Counts the number of pdfs in pdf_dir_list.
+#Returns the sum of pdf and txts: sum should equal 96961.
+def get_count(id_txt_list, pdf_dir_list):
+    c=0
+    for txt in id_txt_list:
+        c+= sum(1 for line in open(txt))
+    for d in pdf_dir_list:
+        c+=len(os.listdir(d))
+    return c
+
+def any_rev(array,string):
+    for i in array:
+        if i in string:
+            return True
+    return False
+
 def convert_pdf_to_txt(path):
     rsrcmgr = PDFResourceManager()
     retstr = StringIO()
@@ -199,85 +318,8 @@ def convert_pdf_to_txt(path):
     retstr.close()
     return text
 
-def extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_bad):
-    f = open(output_path, "w")
-    text= convert_pdf_to_txt(pdf_path)
-    lineiterator = iter(text.splitlines())
-    for line in lineiterator:
-        if len(unicodedata.normalize("NFD",line.casefold()).replace("  "," ").strip()) > 0:
-            if any_rev(sec_header_good,unicodedata.normalize("NFD",line.casefold()).replace("  "," ")):
-                print(line+"******************")
-                print(next(lineiterator))
-                for i in range(1000):
-                    l = next(lineiterator)
-                    print(l)
-                    if not any_rev(sec_header_bad,unicodedata.normalize("NFD",l.casefold()).replace("  "," ")):
-                        f.write(l+"\n")
-                    else:  
-                        break
-                break
-    f.close()
-def any_rev(array,string):
-    for i in array:
-        if i in string:
-            return True
-    return False
-
-def unpack_pdfextract(s):
-    a = s.split(",")
-    print(a[0])
-    extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
-
-def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):
-    if pdf_dir[-1]!= "/":
-        pdf_dir = pdf_dir+"/"
-    if output_dir[-1] != "/":
-        output_dir = output_dir+"/"
-    pool = Pool(num_threads)
-    pack = []
-    for f in os.listdir(pdf_dir):
-        if f.endswith(".pdf"):
-            pack.append(pdf_dir+f+","+output_dir+f.split(".pdf")[0]+".txt,"+'$'.join(sec_header_good)+","+'$'.join(sec_header_bad))
-    results = pool.map(unpack_pdfextract, pack,4)
-
-def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
-    if pdf_dir[-1]!= "/":
-        pdf_dir = pdf_dir+"/"
-    if output_dir[-1] != "/":
-        output_dir = output_dir+"/"
-    for f in os.listdir(pdf_dir):
-        if f.endswith(".pdf"):
-            print(pdf_dir+f)
-            extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
-def post_science_parse(s):
-    a=s.split("+")
-    print(a[0])
-    try:
-        with open(a[0], 'rb') as f:
-            r = requests.post('http://localhost:8080/v1', files={a[0]: f})
-            open(a[1]+a[0].split('/')[-1][0:-4]+'.json','w',encoding='utf-8').write(r.text)
-    except Exception as e:
-        print("ERROR "+str(e))
-
-def get_pdf_json(pdf_dir,out_dir,num_thread=2):
-    if pdf_dir[-1]!="/":
-        pdf_dir = pdf_dir+"/"
-    if out_dir[-1]!="/":
-        out_dir = out_dir+"/"
-    pool = Pool(num_thread)
-    pack = []
-    for line in os.listdir(pdf_dir):
-        pack.append(pdf_dir+line+"+"+out_dir)
-    results = pool.map(post_science_parse,pack)
-def remove_dupes_txt(in_path, out_path):
-    lines_seen = set()
-    outfile = open(out_path, "w")
-    for line in open(in_path, "r"):
-        if line not in lines_seen:
-            outfile.write(line)
-            lines_seen.add(line)
-    outfile.close()
-
+"""*********************"""
+"""END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
     remove_dupes_txt('Error_403_ipBan2.txt', 'ids_no_dupes.txt')
