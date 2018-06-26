@@ -12,7 +12,8 @@ from io import StringIO
 import unicodedata
 import ctypes
 import requests
-
+import sqlite3
+import json
 
 """BEGIN RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
 """*********************************************"""
@@ -220,6 +221,42 @@ def get_pdf_json(pdf_dir,out_dir,num_thread=2):
 """END SCIENCE-PARSE SERVER FUNCTIONS"""
 
 
+"""BEGIN JSON PARSING FUNCTIONS"""
+"""****************************"""
+
+def run_json_folder(json_path,exclude_path):
+    if json_path[-1]!="/":
+        json_path = json_path+"/"
+    conn = sqlite3.connect(':memory:',isolation_level=None)
+    cur = conn.cursor()
+    cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT);')
+    for file_path in os.listdir(json_path):
+        file_path=json_path+file_path
+        print(file_path)
+        f = json.load(open(file_path,'r',encoding='utf-8'))
+        if f['metadata']['sections']:
+            for sec in f['metadata']['sections']:
+                if sec['heading']:
+                    text_clean = ''.join([i if ord(i) < 128 else '' for i in sec['text']]).replace("'",'')
+                    heading_clean = ''.join([i if ord(i) < 128 else '' for i in sec['heading']]).replace("'",'')
+                    cmd = "INSERT INTO temp_table VALUES ('"+heading_clean+"', '"+text_clean+"', "+file_path.split('/')[-1].split('.pdf.json')[0]+");"
+                    cur.execute(cmd)
+
+    re = csv.reader(open(exclude_path,'r',encoding='utf-8'))
+    for row in re:
+        cur.execute("DELETE from temp_table WHERE sec_head like '%"+row[0]+"%';")
+    cur.execute("DELETE from temp_table WHERE length(text) < 500;")
+
+    cur.execute('SELECT * FROM temp_table;')
+    rows = cur.fetchall()
+    for row in rows:
+        print(row)
+
+"""**************************"""
+"""END JSON PARSING FUNCTIONS"""
+
+
+
 """BEGIN CSV PARSING FUNCTIONS"""
 """***************************"""
 #make list of PubMed ids from PubMed csv
@@ -318,8 +355,15 @@ def convert_pdf_to_txt(path):
     retstr.close()
     return text
 
+def rem_pmcid(in_path,out_path):
+    with open(in_path,'r') as inF:
+        with open(out_path,'w') as outF:
+            for line in inF:
+                outF.write(line.split('+')[1])
+
+
 """*********************"""
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
-    remove_dupes_txt('Error_403_ipBan2.txt', 'ids_no_dupes.txt')
+    run_json_folder('C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall','exclude.csv')
