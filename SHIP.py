@@ -20,21 +20,36 @@ import json
 
 #func to process id in ruby script
 def process_line(line):
+    #output PubMed id of document being run through ruby script
     print(line.strip())
+    #pass id to ruby script and save output in buffer
     p = subprocess.Popen("ruby pubmedid2pdf.rb "+line,shell = False,
                          stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     p.wait()
+    #the ruby script uses alot of console warnings that mainly come to stderr
+    #if the dl failed return the id to be added to list of failed ids
     if "failed" in str(p.stderr.read()):
         return line
+    #if the dl is successful return no id (empty string)
     return ""
 
 #run ruby script on list of ids at file_path and output failed ids
 #to kickback_loc. Optional num_threads number of threads to run- default 10
 def run_id_ruby(file_path,kickback_path,num_threads=10):
+    #record start time to calculate total runtime later
     start = datetime.now()
+
+    #init pool of workers from specified number
+    #this is how many downloads will run in parallel
     pool = Pool(num_threads)
+
+    #use Pool.map to have the worker pool take ids in chunks from txt
+    #and run them though ruby script using the process_line function
+    #results will be failed with the ids that failed to dl
     with open(file_path) as source_file:
         results = pool.map(process_line, source_file)
+
+    #write the list of failed ids to file
     with open(kickback_path,'w') as f:
         for i in results:
             f.write(i)
@@ -46,14 +61,16 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
 
 """BEGIN PMC DOWLOAD FUNCTIONS"""
 """***************************"""
+
 #Download pdf at download_url from PMC website.
 #Save pdf to folder at pdf_output_dir and name pdf pmed_id.
 #Output failed downloads to kickback_path txt.
-
 def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
     kick = open(kickback_path,'a')
     try:
+        #assemble http request. PMC is sus if you don't have User-Agent header
         headers = {}
+        #set agent to IE
         headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
         req = urllib.request.Request(download_url, headers = headers)
         resp = urllib.request.urlopen(req)
@@ -217,9 +234,13 @@ def get_pdf_json(pdf_dir,out_dir,num_thread=2):
 
 def run_json_folder(json_path,exclude_path,csv_out_path):
     json_path = clean_path(json_path)
+
+    #init sqlite db in memory
     conn = sqlite3.connect(':memory:')
     cur = conn.cursor()
     cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT);')
+
+    #go through json files and add their data to table
     for file_path in os.listdir(json_path):
         file_path=json_path+file_path
         print(file_path)
@@ -231,23 +252,34 @@ def run_json_folder(json_path,exclude_path,csv_out_path):
                     heading_clean = clean_sql(sec['heading'])
                     cmd = "INSERT INTO temp_table VALUES (?, ?, ?)"
                     cur.execute(cmd, (heading_clean, text_clean,file_path.split('/')[-1].split('.pdf.json')[0]))
+        #add title and author entry to table
         if f['metadata']['title']:
             cur.execute("INSERT INTO temp_table VALUES (?, ?,?)", ('title', clean_sql(f['metadata']['title']),file_path.split('/')[-1].split('.pdf.json')[0]))
         if f['metadata']['authors']:
             cur.execute("INSERT INTO temp_table VALUES (?, ?,?)", ('authors', clean_sql(str(f['metadata']['authors'])),file_path.split('/')[-1].split('.pdf.json')[0]))
 
+    #read unwanted headers from csv file
     re = csv.reader(open(exclude_path,'r',encoding='utf-8'))
     for row in re:
+        #delete where section header like word in csv
         cur.execute("DELETE from temp_table WHERE sec_head like '%"+row[0]+"%';")
+    #remove all sections where the section text is less than certain length-- currently: 600 chars
+    #added catch for authors and title since they are most likely too short but still should be included
     cur.execute("DELETE from temp_table WHERE length(text) < 600 AND sec_head!='title' AND sec_head !='authors';")
 
+    #go through and split up entries where the section text is longer than 7000 characters
+    #select all entries with sec. text longer than 700 characters
     cur.execute('SELECT * FROM temp_table WHERE length(text) > 7000;')
     rows = cur.fetchall()
     for row in rows:
+        #split the sec. text of entry into 7000 character chunks and interate
         for s in split_every(7000, row[1]):
+            #insert chunk of text into table
             cur.execute("INSERT INTO temp_table VALUES (?, ?, ?)",(row[0],s,str(row[2])))
+        #remove old entry
         cur.execute("DELETE from temp_table WHERE sec_head like ? AND id=? AND length(text)>7000;",(row[0],str(row[2]))) 
 
+    #get the remaining entries in the table and write them to csv
     cur.execute('SELECT * FROM temp_table ORDER BY id')
     csvw = csv.writer(open(csv_out_path,'w'), lineterminator='\n')
     csvw.writerow([i[0] for i in cur.description])
@@ -307,6 +339,8 @@ def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
 """BEGIN UTILITY FUNCTIONS"""
 """***********************"""
 
+#Removes duplicate lines in txt file located at in_path
+#Outputs to out_path
 def remove_dupes_txt(in_path, out_path):
     lines_seen = set()
     outfile = open(out_path, "w")

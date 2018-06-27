@@ -1,0 +1,49 @@
+.. SHIP documentation master file, created by
+   sphinx-quickstart on Wed Jun 20 15:34:13 2018.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to SHIP's documentation!
+================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+.. automodule:: SHIP
+
+.. autofunction:: SHIP.run_id_ruby
+Run ruby script on list of ids at *file_path* and output failed ids to *kickback_loc*. Optional num_threads number of threads to run: default 10
+
+.. autofunction:: process_line
+Function to process id in ruby script.
+
+.. autofunction:: get_pmedid_csv
+Make list of PubMed ids from PubMed csv
+
+
+.. autofunction:: get_pmcid_csv
+Take PubMed csv at *csv_file_path*. Make list of entries with PMCID format "PMCID+PUBMEDID" at *pmc_path*. Make list of entries with no PMCID at *nopmc_path*.
+
+.. autofunction:: download_pdf_fromid
+Download pdf at *download_url* from PMC website. Save pdf to folder at *pdf_output_dir* and name pdf *pmed_id*. Output failed downloads to *kickback_path* txt.
+
+.. autofunction:: get_from_pmcid
+PREREQ: id file in format "PMCID+PUBMEDID".
+Download pdfs of entries in txt at *id_file_path*. Downloads pdfs to *pdf_output_dir*. Output failed downloads to *kickback_path*.
+
+.. autofunction:: get_from_pmcid_thread
+:meth:`!get_from_pmcid` threaded version. Default 10 threads.
+
+.. autofunction:: get_count
+Counts the number of txts in *id_txt_list*. Counts the number of pdfs in *pdf_dir_list*. Returns the sum of pdf and txts: sum should equal 96961.
+
+.. autofunction:: csv_add_pcmid
+Add PMCID to PUBMEDIDs in *pmed_id_path* txt. Output results in format "PMCID+PUBMEDID" to *output_path*.
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
