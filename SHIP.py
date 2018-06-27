@@ -370,8 +370,16 @@ def clean_path(path):
         return path+"/"
     else:
         return path
+
 def clean_sql(s):
     return ''.join([i if ord(i) < 128 else '' for i in s])
+
+def get_empty_files(pdf_dir,out_path):
+    out = open(out_path,'w')
+    for f in os.listdir(os.fsencode(pdf_dir)):
+        if os.stat(f).st_size == 0:
+            out.write(f.split("/")[-1].split(".pdf")[0]+"\n")
+    out.close()
 
 """*********************"""
 """END UTILITY FUNCTIONS"""
