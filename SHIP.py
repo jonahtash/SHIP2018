@@ -71,8 +71,7 @@ def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
 #Downloads pdfs to pdf_output_dir.
 #Output failed downloads to kickback_path.
 def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
-    if pdf_output_dir[-1]!="/":
-        pdf_output_dir = pdf_output_dir+"/"
+    pdf_output_dir = clean_path(pdf_output_dir)
     with open(id_file_path,'r') as f:
         for line in f:
             a = line.split("+")
@@ -89,8 +88,7 @@ def unpack(s):
 #Get_from_pmcid threaded version.
 #Default 10 threads.
 def get_from_pmcid_thread(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
-    if pdf_output_dir[-1]!="/":
-        pdf_output_dir = pdf_output_dir+"/"
+    pdf_output_dir = clean_path(pdf_output_dir)
     pool = Pool(num_thread)
     pack = []
     for line in open(id_file_path,'r'):
@@ -129,8 +127,7 @@ def unpack_error(s):
                         a[1].strip(),a[2])
 
 def get_error_thread(id_file_path,pdf_output_dir,num_thread=2):
-    if pdf_output_dir[-1]!="/":
-        pdf_output_dir = pdf_output_dir+"/"
+    pdf_output_dir = clean_path(pdf_output_dir)
     pool = Pool(num_thread)
     pack = []
     for line in open(id_file_path,'r'):
@@ -163,10 +160,8 @@ def extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_ba
     f.close()
 
 def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
-    if pdf_dir[-1]!= "/":
-        pdf_dir = pdf_dir+"/"
-    if output_dir[-1] != "/":
-        output_dir = output_dir+"/"
+    pdf_dir = clean_path(pdf_dir)
+    output_dir = clean_path(output_dir)
     for f in os.listdir(pdf_dir):
         if f.endswith(".pdf"):
             print(pdf_dir+f)
@@ -178,10 +173,8 @@ def unpack_pdfextract(s):
     extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
 
 def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):
-    if pdf_dir[-1]!= "/":
-        pdf_dir = pdf_dir+"/"
-    if output_dir[-1] != "/":
-        output_dir = output_dir+"/"
+    pdf_dir = clean_path(pdf_dir)
+    output_dir = clean_path(output_dir)
     pool = Pool(num_threads)
     pack = []
     for f in os.listdir(pdf_dir):
@@ -207,10 +200,8 @@ def post_science_parse(s):
         print("ERROR "+str(e))
 
 def get_pdf_json(pdf_dir,out_dir,num_thread=2):
-    if pdf_dir[-1]!="/":
-        pdf_dir = pdf_dir+"/"
-    if out_dir[-1]!="/":
-        out_dir = out_dir+"/"
+    pdf_dir = clean_path(pdf_dir)
+    out_dir = clean_path(out_dir)
     pool = Pool(num_thread)
     pack = []
     for line in os.listdir(pdf_dir):
@@ -224,10 +215,9 @@ def get_pdf_json(pdf_dir,out_dir,num_thread=2):
 """BEGIN JSON PARSING FUNCTIONS"""
 """****************************"""
 
-def run_json_folder(json_path,exclude_path):
-    if json_path[-1]!="/":
-        json_path = json_path+"/"
-    conn = sqlite3.connect(':memory:',isolation_level=None)
+def run_json_folder(json_path,exclude_path,csv_out_path):
+    json_path = clean_path(json_path)
+    conn = sqlite3.connect(':memory:')
     cur = conn.cursor()
     cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT);')
     for file_path in os.listdir(json_path):
@@ -237,21 +227,32 @@ def run_json_folder(json_path,exclude_path):
         if f['metadata']['sections']:
             for sec in f['metadata']['sections']:
                 if sec['heading']:
-                    text_clean = ''.join([i if ord(i) < 128 else '' for i in sec['text']]).replace("'",'')
-                    heading_clean = ''.join([i if ord(i) < 128 else '' for i in sec['heading']]).replace("'",'')
-                    cmd = "INSERT INTO temp_table VALUES ('"+heading_clean+"', '"+text_clean+"', "+file_path.split('/')[-1].split('.pdf.json')[0]+");"
-                    cur.execute(cmd)
+                    text_clean = clean_sql(sec['text'])
+                    heading_clean = clean_sql(sec['heading'])
+                    cmd = "INSERT INTO temp_table VALUES (?, ?, ?)"
+                    cur.execute(cmd, (heading_clean, text_clean,file_path.split('/')[-1].split('.pdf.json')[0]))
+        if f['metadata']['title']:
+            cur.execute("INSERT INTO temp_table VALUES (?, ?,?)", ('title', clean_sql(f['metadata']['title']),file_path.split('/')[-1].split('.pdf.json')[0]))
+        if f['metadata']['authors']:
+            cur.execute("INSERT INTO temp_table VALUES (?, ?,?)", ('authors', clean_sql(str(f['metadata']['authors'])),file_path.split('/')[-1].split('.pdf.json')[0]))
 
     re = csv.reader(open(exclude_path,'r',encoding='utf-8'))
     for row in re:
         cur.execute("DELETE from temp_table WHERE sec_head like '%"+row[0]+"%';")
-    cur.execute("DELETE from temp_table WHERE length(text) < 500;")
+    cur.execute("DELETE from temp_table WHERE length(text) < 600 AND sec_head!='title' AND sec_head !='authors';")
 
-    cur.execute('SELECT * FROM temp_table;')
+    cur.execute('SELECT * FROM temp_table WHERE length(text) > 7000;')
     rows = cur.fetchall()
     for row in rows:
-        print(row)
+        for s in split_every(7000, row[1]):
+            cur.execute("INSERT INTO temp_table VALUES (?, ?, ?)",(row[0],s,str(row[2])))
+        cur.execute("DELETE from temp_table WHERE sec_head like ? AND id=? AND length(text)>7000;",(row[0],str(row[2]))) 
 
+    cur.execute('SELECT * FROM temp_table ORDER BY id')
+    csvw = csv.writer(open(csv_out_path,'w'), lineterminator='\n')
+    csvw.writerow([i[0] for i in cur.description])
+    csvw.writerows(cur) 
+    
 """**************************"""
 """END JSON PARSING FUNCTIONS"""
 
@@ -361,9 +362,19 @@ def rem_pmcid(in_path,out_path):
             for line in inF:
                 outF.write(line.split('+')[1])
 
+def split_every(n, s):
+    return [ s[i:i+n] for i in range(0, len(s), n) ]
+
+def clean_path(path):
+    if path[-1]!="/":
+        return path+"/"
+    else:
+        return path
+def clean_sql(s):
+    return ''.join([i if ord(i) < 128 else '' for i in s])
 
 """*********************"""
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
-    run_json_folder('C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall','exclude.csv')
+    run_json_folder('C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall','exclude.csv','data.csv')
