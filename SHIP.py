@@ -14,6 +14,7 @@ import ctypes
 import requests
 import sqlite3
 import json
+import re
 
 """BEGIN RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
 """*********************************************"""
@@ -232,13 +233,16 @@ def get_pdf_json(pdf_dir,out_dir,num_thread=2):
 """BEGIN JSON PARSING FUNCTIONS"""
 """****************************"""
 
-def run_json_folder(json_path,exclude_path,csv_out_path):
+def run_json_folder(json_path,exclude_path,bkup_csv_path,csv_out_path):
     json_path = clean_path(json_path)
 
     #init sqlite db in memory
+    #sql db structure:
+    ##Table: temp_table
+    ###Columns: sec_head, text, id, upper_to_lower, digit_to_char, special_to_char
     conn = sqlite3.connect(':memory:')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT);')
+    cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT, upper_to_lower FLOAT, digit_to_char FLOAT, special_to_char FLOAT);')
 
     #go through json files and add their data to table
     for file_path in os.listdir(json_path):
@@ -247,16 +251,25 @@ def run_json_folder(json_path,exclude_path,csv_out_path):
         f = json.load(open(file_path,'r',encoding='utf-8'))
         if f['metadata']['sections']:
             for sec in f['metadata']['sections']:
+                text_clean = clean_sql(sec['text'])
+                heading_clean = ""
                 if sec['heading']:
-                    text_clean = clean_sql(sec['text'])
                     heading_clean = clean_sql(sec['heading'])
-                    cmd = "INSERT INTO temp_table VALUES (?, ?, ?)"
-                    cur.execute(cmd, (heading_clean, text_clean,file_path.split('/')[-1].split('.pdf.json')[0]))
+                else:
+                    heading_clean = "null"
+                cmd = "INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?)"
+                cur.execute(cmd, (heading_clean, text_clean.replace("N IH -PA Author M anuscript",''),file_path.split('/')[-1].split('.pdf.json')[0],upper_ratio(text_clean),digit_ratio(text_clean),special_ratio(text_clean)))
         #add title and author entry to table
         if f['metadata']['title']:
-            cur.execute("INSERT INTO temp_table VALUES (?, ?,?)", ('title', clean_sql(f['metadata']['title']),file_path.split('/')[-1].split('.pdf.json')[0]))
+            cur.execute("INSERT INTO temp_table VALUES (?, ?,?, 0, 0, 0)", ('title', clean_sql(f['metadata']['title']),file_path.split('/')[-1].split('.pdf.json')[0]))
         if f['metadata']['authors']:
-            cur.execute("INSERT INTO temp_table VALUES (?, ?,?)", ('authors', clean_sql(str(f['metadata']['authors'])),file_path.split('/')[-1].split('.pdf.json')[0]))
+            cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, 0, 0, 0)", ('authors', clean_sql(str(f['metadata']['authors'])),file_path.split('/')[-1].split('.pdf.json')[0]))
+
+    #Dump unedited table into backup csv
+    cur.execute('SELECT * FROM temp_table ORDER BY id')
+    csvw = csv.writer(open(bkup_csv_path,'w'), lineterminator='\n')
+    csvw.writerow([i[0] for i in cur.description])
+    csvw.writerows(cur) 
 
     #read unwanted headers from csv file
     re = csv.reader(open(exclude_path,'r',encoding='utf-8'))
@@ -267,17 +280,32 @@ def run_json_folder(json_path,exclude_path,csv_out_path):
     #added catch for authors and title since they are most likely too short but still should be included
     cur.execute("DELETE from temp_table WHERE length(text) < 600 AND sec_head!='title' AND sec_head !='authors';")
 
-    #go through and split up entries where the section text is longer than 7000 characters
-    #select all entries with sec. text longer than 700 characters
-    cur.execute('SELECT * FROM temp_table WHERE length(text) > 7000;')
+    #go through and split up entries where the section text is longer than 4000 characters
+    #select all entries with sec. text longer than 4000 characters
+    cur.execute('SELECT * FROM temp_table WHERE length(text) > 4000;')
     rows = cur.fetchall()
     for row in rows:
-        #split the sec. text of entry into 7000 character chunks and interate
-        for s in split_every(7000, row[1]):
+        #split the sec. text of entry into 4000 character chunks and interate
+        bs = ""
+        for s in [e+". " for e in row[1].split(". ") if e]:
             #insert chunk of text into table
-            cur.execute("INSERT INTO temp_table VALUES (?, ?, ?)",(row[0],s,str(row[2])))
+            if len(bs + s) > 4000:  
+                cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?)",(row[0],bs,str(row[2]),upper_ratio(bs),digit_ratio(bs),special_ratio(bs)))
+                bs = s
+            else:
+                bs+=s
         #remove old entry
-        cur.execute("DELETE from temp_table WHERE sec_head like ? AND id=? AND length(text)>7000;",(row[0],str(row[2]))) 
+        cur.execute("DELETE from temp_table WHERE sec_head like ? AND id=? AND length(text)>4000;",(row[0],str(row[2]))) 
+
+    #delete entries based on text statistics
+    #the both constants are for when entries have both text stats greater than a given value
+    both_upper = .1
+    both_digit = .1
+    #for when just upper_to_lower is greater than certain ratio
+    uppper = .15
+    #for when just digit_to_char is greater than certain ratio
+    digit = .12
+    cur.execute("DELETE from temp_table WHERE (upper_to_lower > ? AND digit_to_char > ?) OR upper_to_lower > ? OR digit_to_char > ?;",(both_upper,both_digit,uppper,digit)) 
 
     #get the remaining entries in the table and write them to csv
     cur.execute('SELECT * FROM temp_table ORDER BY id')
@@ -411,12 +439,60 @@ def clean_sql(s):
 def get_empty_files(pdf_dir,out_path):
     out = open(out_path,'w')
     for f in os.listdir(os.fsencode(pdf_dir)):
-        if os.stat(f).st_size == 0:
-            out.write(f.split("/")[-1].split(".pdf")[0]+"\n")
+        if os.stat(str(pdf_dir)+"/"+f.decode('utf-8')).st_size == 0:
+            out.write(f.decode('utf-8').split("/")[-1].split(".pdf")[0]+"\n")
     out.close()
+
+def sort_nonretrievable(csv_file_path, good_out_path, bad_out_path):
+    good_pdf= open(good_out_path, 'w')
+    bad_pdf = open(bad_out_path, 'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        readCSV = csv.reader(csvf, delimiter=',')
+        for row in readCSV:
+            if "doi:" not in row[3] and "PMCID" not in row[7]:
+                print("BAD: "+row[9])
+                bad_pdf.write(row[9]+"\n")
+            else:
+                print("GOOD: "+row[9])
+                good_pdf.write(row[9]+"\n")
+    
+        good_pdf.close()
+        bad_pdf.close()
+        
+def txt_diff(txt1,txt2,out_txt):
+    t1 = open(txt1,'r').readlines()
+    t2 = open(txt2,'r').readlines()
+    open(out_txt,'w').writelines(list(set(t1)-set(t2)))
+
+def upper_ratio(s):
+    if len(s)==0:
+        return 0
+    u = len(re.findall('[A-Z]',s))
+    l = len(re.findall('[a-z]',s))
+    if u+l==0:
+        return 0
+    return u/(u+l)
+
+def digit_ratio(s):
+    if len(s)==0:
+        return 0
+    d = len(re.findall('[0-9]',s))
+    c = len(re.findall('[A-z]',s))
+    if c+d==0:
+        return 0
+    return d/(c+d)
+
+def special_ratio(s):
+    if len(s)==0:
+        return 0
+    c = len(re.findall('[A-z]',s))
+    s = len(re.findall('[\\.\\!\\@\\#\\$\\%\\^\\&\\*\\(\\)\\_\\+\\-\\=]',s))
+    if c+s==0:
+        return 0
+    return s/(c+s)
 
 """*********************"""
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
-    run_json_folder('C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall','exclude.csv','data.csv')
+    run_json_folder('C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall','C:/Users/jnt11/Documents/SHIPFiles/exclude.csv','bkup.csv','data_1_5_1127.csv')
