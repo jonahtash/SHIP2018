@@ -242,32 +242,39 @@ def run_json_folder(json_path,exclude_path,bkup_csv_path,csv_out_path):
     ###Columns: sec_head, text, id, upper_to_lower, digit_to_char, special_to_char
     conn = sqlite3.connect(':memory:')
     cur = conn.cursor()
-    cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT, upper_to_lower FLOAT, digit_to_char FLOAT, special_to_char FLOAT);')
+    cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT, sec_num INT, split_num INT, upper_to_lower FLOAT, digit_to_char FLOAT, special_to_char FLOAT);')
 
     #go through json files and add their data to table
     for file_path in os.listdir(json_path):
         file_path=json_path+file_path
         print(file_path)
         f = json.load(open(file_path,'r',encoding='utf-8'))
+        c=1
+        #add title and author entry to table
+        if f['metadata']['title']:
+            cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0)", ('title', clean_sql(f['metadata']['title']),file_path.split('/')[-1].split('.pdf.json')[0],c))
+            c+= 1
+        if f['metadata']['authors']:
+            cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0)", ('authors', clean_sql(str(f['metadata']['authors'])),file_path.split('/')[-1].split('.pdf.json')[0],c))
+            c+= 1
+
         if f['metadata']['sections']:
             for sec in f['metadata']['sections']:
-                text_clean = clean_sql(sec['text'])
+                text_clean = clean_sql(sec['text']).replace("N IH -PA Author M anuscript\n",'').replace("N IH -PA Author M anuscript",'')
                 heading_clean = ""
                 if sec['heading']:
                     heading_clean = clean_sql(sec['heading'])
                 else:
                     heading_clean = "null"
-                cmd = "INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?)"
-                cur.execute(cmd, (heading_clean, text_clean.replace("N IH -PA Author M anuscript",''),file_path.split('/')[-1].split('.pdf.json')[0],upper_ratio(text_clean),digit_ratio(text_clean),special_ratio(text_clean)))
-        #add title and author entry to table
-        if f['metadata']['title']:
-            cur.execute("INSERT INTO temp_table VALUES (?, ?,?, 0, 0, 0)", ('title', clean_sql(f['metadata']['title']),file_path.split('/')[-1].split('.pdf.json')[0]))
-        if f['metadata']['authors']:
-            cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, 0, 0, 0)", ('authors', clean_sql(str(f['metadata']['authors'])),file_path.split('/')[-1].split('.pdf.json')[0]))
+                cmd = "INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ? ,? )"
+                cur.execute(cmd, (heading_clean, text_clean,file_path.split('/')[-1].split('.pdf.json')[0],c,1,upper_ratio(text_clean),digit_ratio(text_clean),special_ratio(text_clean)))
+                c+= 1
 
+
+    
     #Dump unedited table into backup csv
-    cur.execute('SELECT * FROM temp_table ORDER BY id')
-    csvw = csv.writer(open(bkup_csv_path,'w'), lineterminator='\n')
+    cur.execute('SELECT * FROM temp_table ORDER BY id,sec_num,split_num')
+    csvw = csv.writer(open(bkup_csv_path,'w'), lineterminator='\n',dialect="excel")
     csvw.writerow([i[0] for i in cur.description])
     csvw.writerows(cur) 
 
@@ -287,10 +294,15 @@ def run_json_folder(json_path,exclude_path,bkup_csv_path,csv_out_path):
     for row in rows:
         #split the sec. text of entry into 4000 character chunks and interate
         bs = ""
+        c_sec = row[3]
+        c_split = 1
         for s in [e+". " for e in row[1].split(". ") if e]:
             #insert chunk of text into table
             if len(bs + s) > 4000:  
-                cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?)",(row[0],bs,str(row[2]),upper_ratio(bs),digit_ratio(bs),special_ratio(bs)))
+                cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ?)",(row[0],bs,str(row[2]),c_sec,c_split,upper_ratio(bs),digit_ratio(bs),special_ratio(bs)))
+                if "null" in row[0]:
+                    c_sec+= 1
+                c_split+= 1
                 bs = s
             else:
                 bs+=s
@@ -308,8 +320,8 @@ def run_json_folder(json_path,exclude_path,bkup_csv_path,csv_out_path):
     cur.execute("DELETE from temp_table WHERE (upper_to_lower > ? AND digit_to_char > ?) OR upper_to_lower > ? OR digit_to_char > ?;",(both_upper,both_digit,uppper,digit)) 
 
     #get the remaining entries in the table and write them to csv
-    cur.execute('SELECT * FROM temp_table ORDER BY id')
-    csvw = csv.writer(open(csv_out_path,'w'), lineterminator='\n')
+    cur.execute('SELECT * FROM temp_table ORDER BY id,sec_num,split_num')
+    csvw = csv.writer(open(csv_out_path,'w'), lineterminator='\n',dialect="excel")
     csvw.writerow([i[0] for i in cur.description])
     csvw.writerows(cur) 
     
@@ -434,7 +446,7 @@ def clean_path(path):
         return path
 
 def clean_sql(s):
-    return ''.join([i if ord(i) < 128 else '' for i in s])
+    return ''.join([i if ord(i) < 128 else '' for i in s]).replace("\t",' ').replace("\n",' ')
 
 def get_empty_files(pdf_dir,out_path):
     out = open(out_path,'w')
