@@ -355,7 +355,7 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 						inf = 1 
 				except:
 					#idk python
-					s='|-/'
+					s='||-//'
 		#update entry in table with new sec_head and if that sec_head was inferred (i.e changed by this code block)
 		cur.execute("UPDATE temp_table SET sec_head = ?, inferred = ? WHERE sec_num = ? AND id = ? AND split_num = ?", (cur_head, inf, row[3], row[2], row[4]))
 
