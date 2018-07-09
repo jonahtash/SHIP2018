@@ -507,4 +507,4 @@ def special_ratio(s):
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
-    run_json_folder('C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall','C:/Users/jnt11/Documents/SHIPFiles/exclude.csv','bkup.csv','data_1_5_1127.csv')
+    run_id_ruby('kick_first_run.txt','kick_second_run.txt',num_threads=7)
