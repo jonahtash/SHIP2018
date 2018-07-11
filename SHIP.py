@@ -4,10 +4,10 @@ from datetime import datetime
 import subprocess
 import csv
 import urllib.request
-"""from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
-from pdfminer.pdfpage import PDFPage"""
+from pdfminer.pdfpage import PDFPage
 from io import StringIO
 import unicodedata
 import ctypes
@@ -15,46 +15,86 @@ import requests
 import sqlite3
 import json
 import re
-import pandas as pd
+
 """BEGIN RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
 """*********************************************"""
 
 #func to process id in ruby script
 def process_line(line):
-	#output PubMed id of document being run through ruby script
-	print(line.strip())
-	#pass id to ruby script and save output in buffer
-	p = subprocess.Popen("ruby pubmedid2pdf.rb "+line,shell = False,
-						 stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-	p.wait()
-	#the ruby script uses alot of console warnings that mainly come to stderr
-	#if the dl failed return the id to be added to list of failed ids
-	if "failed" in str(p.stderr.read()):
-		return line
-	#if the dl is successful return no id (empty string)
-	return ""
+    #output PubMed id of document being run through ruby script
+    print(line.strip())
+    #pass id to ruby script and save output in buffer
+    p = subprocess.Popen("ruby pubmedid2pdf.rb "+line,shell = False,
+                         stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    p.wait()
+    #the ruby script uses alot of console warnings that mainly come to stderr
+    #if the dl failed return the id to be added to list of failed ids
+    if "failed" in str(p.stderr.read()):
+        return line
+    #if the dl is successful return no id (empty string)
+    return ""
 
 #run ruby script on list of ids at file_path and output failed ids
 #to kickback_loc. Optional num_threads number of threads to run- default 10
 def run_id_ruby(file_path,kickback_path,num_threads=10):
-	#record start time to calculate total runtime later
-	start = datetime.now()
+    #record start time to calculate total runtime later
+    start = datetime.now()
 
-	#init pool of workers from specified number
-	#this is how many downloads will run in parallel
-	pool = Pool(num_threads)
+    #init pool of workers from specified number
+    #this is how many downloads will run in parallel
+    pool = Pool(num_threads)
 
-	#use Pool.map to have the worker pool take ids in chunks from txt
-	#and run them though ruby script using the process_line function
-	#results will be failed with the ids that failed to dl
-	with open(file_path) as source_file:
-		results = pool.map(process_line, source_file)
+    #use Pool.map to have the worker pool take ids in chunks from txt
+    #and run them though ruby script using the process_line function
+    #results will be failed with the ids that failed to dl
+    with open(file_path) as source_file:
+        results = pool.map(process_line, source_file)
 
-	#write the list of failed ids to file
-	with open(kickback_path,'w') as f:
-		for i in results:
-			f.write(i)
-	return datetime.now()-start
+    #write the list of failed ids to file
+    with open(kickback_path,'w') as f:
+        for i in results:
+            f.write(i)
+    return datetime.now()-start
+
+def process_liebert(line):
+    #output PubMed id of document being run through ruby script
+    try:
+        headers = {}
+        headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
+        print(url)
+        req = urllib.request.Request(url, headers = headers)
+        resp = urllib.request.urlopen(req)
+        if "liebertpub" in resp.geturl():
+            return line
+        else:
+            return ""
+    except Exception as e:
+        print(str(e))
+    #the ruby script uses alot of console warnings that mainly come to stderr
+    #if the dl failed return the id to be added to list of failed ids
+    if "liebertpub" in resp.geturl():
+        return line
+    #if the dl is successful return no id (empty string)
+    return ""
+
+def get_liebert(id_txt,out_txt, not_out_txt,num_threads=10):
+    pool = Pool(num_threads)
+
+    #use Pool.map to have the worker pool take ids in chunks from txt
+    #and run them though ruby script using the process_line function
+    #results will be failed with the ids that failed to dl
+    with open(id_txt) as source_file:
+        try:
+            results = pool.map(process_liebert, source_file)
+        except:
+            s = "||-//"
+
+    #write the list of failed ids to file
+    with open(out_txt,'w') as f:
+        for i in results:
+            f.write(i)
+    txt_diff(id_txt,out_txt,not_out_txt)
 
 """********************************************"""
 """END RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
@@ -67,21 +107,21 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
 #Save pdf to folder at pdf_output_dir and name pdf pmed_id.
 #Output failed downloads to kickback_path txt.
 def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
-	kick = open(kickback_path,'a')
-	try:
-		#assemble http request. PMC is sus if you don't have User-Agent header
-		headers = {}
-		#set agent to IE
-		headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
-		req = urllib.request.Request(download_url, headers = headers)
-		resp = urllib.request.urlopen(req)
-		with open("./"+pdf_output_dir+pmed_id+".pdf",'wb') as f:
-			f.write(resp.read())
-			f.close()
-	except Exception as e:
-		print(str(e))
-		kick.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
-	kick.close()
+    kick = open(kickback_path,'a')
+    try:
+        #assemble http request. PMC is sus if you don't have User-Agent header
+        headers = {}
+        #set agent to IE
+        headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        req = urllib.request.Request(download_url, headers = headers)
+        resp = urllib.request.urlopen(req)
+        with open("./"+pdf_output_dir+pmed_id+".pdf",'wb') as f:
+            f.write(resp.read())
+            f.close()
+    except Exception as e:
+        print(str(e))
+        kick.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+    kick.close()
 
 
 #PREREQ: id file in format "PMCID+PUBMEDID".
@@ -89,69 +129,69 @@ def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
 #Downloads pdfs to pdf_output_dir.
 #Output failed downloads to kickback_path.
 def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
-	pdf_output_dir = clean_path(pdf_output_dir)
-	with open(id_file_path,'r') as f:
-		for line in f:
-			a = line.split("+")
-			download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
-						  a[1].strip(),pdf_output_dir,kickback_path)
-			print(a[0]+" "+a[1].strip())
+    pdf_output_dir = clean_path(pdf_output_dir)
+    with open(id_file_path,'r') as f:
+        for line in f:
+            a = line.split("+")
+            download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                          a[1].strip(),pdf_output_dir,kickback_path)
+            print(a[0]+" "+a[1].strip())
 
 #helper func for threaded dl
 def unpack(s):
-	a = s.split("+")
-	print(a[0]+" "+a[1].strip())
-	download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
-						a[1].strip(),a[2],a[3])
+    a = s.split("+")
+    print(a[0]+" "+a[1].strip())
+    download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                        a[1].strip(),a[2],a[3])
 #Get_from_pmcid threaded version.
 #Default 10 threads.
 def get_from_pmcid_thread(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
-	pdf_output_dir = clean_path(pdf_output_dir)
-	pool = Pool(num_thread)
-	pack = []
-	for line in open(id_file_path,'r'):
-		pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
-	results = pool.map(unpack,pack)
+    pdf_output_dir = clean_path(pdf_output_dir)
+    pool = Pool(num_thread)
+    pack = []
+    for line in open(id_file_path,'r'):
+        pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
+    results = pool.map(unpack,pack)
 
 def download_pdf_errors(download_url,pmed_id,pdf_output_dir):
-	e404 = open("Error_404.txt",'a')
-	e403_ban = open("Error_403_ipBan.txt",'a')
-	e403_rem = open("Error_403_rem.txt",'a')
-	try:
-		headers = {}
-		headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
-		req = urllib.request.Request(download_url, headers = headers)
-		resp = urllib.request.urlopen(req)
-		with open("./"+pdf_output_dir+pmed_id+".pdf",'wb') as f:
-			f.write(resp.read())
-			f.close()
-	except Exception as e:
-		print(str(e))
-		if e.code == 404:
-			e404.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
-		if e.code == 403:
-			if "Internet connection (IP address) was used to download content in bulk" in str(e.read()):
-				e403_ban.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
-			else:
-				e403_rem.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
-	e404.close()
-	e403_ban.close()
-	e403_rem.close()
+    e404 = open("Error_404.txt",'a')
+    e403_ban = open("Error_403_ipBan.txt",'a')
+    e403_rem = open("Error_403_rem.txt",'a')
+    try:
+        headers = {}
+        headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        req = urllib.request.Request(download_url, headers = headers)
+        resp = urllib.request.urlopen(req)
+        with open("./"+pdf_output_dir+pmed_id+".pdf",'wb') as f:
+            f.write(resp.read())
+            f.close()
+    except Exception as e:
+        print(str(e))
+        if e.code == 404:
+            e404.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+        if e.code == 403:
+            if "Internet connection (IP address) was used to download content in bulk" in str(e.read()):
+                e403_ban.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+            else:
+                e403_rem.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+    e404.close()
+    e403_ban.close()
+    e403_rem.close()
 
 def unpack_error(s):
-	a = s.split("+")
-	print(a[0]+" "+a[1].strip())
-	download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
-						a[1].strip(),a[2])
+    a = s.split("+")
+    print(a[0]+" "+a[1].strip())
+    download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
+                        a[1].strip(),a[2])
 
 def get_error_thread(id_file_path,pdf_output_dir,num_thread=2):
-	pdf_output_dir = clean_path(pdf_output_dir)
-	pool = Pool(num_thread)
-	pack = []
-	for line in open(id_file_path,'r'):
-		pack.append(line+"+"+pdf_output_dir)
-	results = pool.map(unpack_error,pack)
-	
+    pdf_output_dir = clean_path(pdf_output_dir)
+    pool = Pool(num_thread)
+    pack = []
+    for line in open(id_file_path,'r'):
+        pack.append(line+"+"+pdf_output_dir)
+    results = pool.map(unpack_error,pack)
+    
 """*************************"""
 """END PMC DOWLOAD FUNCTIONS"""
 
@@ -159,46 +199,46 @@ def get_error_thread(id_file_path,pdf_output_dir,num_thread=2):
 """BEGIN MATERIALS SECTION PARSER FUNCTIONS"""
 """****************************************"""
 def extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_bad):
-	f = open(output_path, "w")
-	text= convert_pdf_to_txt(pdf_path)
-	lineiterator = iter(text.splitlines())
-	for line in lineiterator:
-		if len(unicodedata.normalize("NFD",line.casefold()).replace("  "," ").strip()) > 0:
-			if any_rev(sec_header_good,unicodedata.normalize("NFD",line.casefold()).replace("  "," ")):
-				print(line+"******************")
-				print(next(lineiterator))
-				for i in range(1000):
-					l = next(lineiterator)
-					print(l)
-					if not any_rev(sec_header_bad,unicodedata.normalize("NFD",l.casefold()).replace("  "," ")):
-						f.write(l+"\n")
-					else:  
-						break
-				break
-	f.close()
+    f = open(output_path, "w")
+    text= convert_pdf_to_txt(pdf_path)
+    lineiterator = iter(text.splitlines())
+    for line in lineiterator:
+        if len(unicodedata.normalize("NFD",line.casefold()).replace("  "," ").strip()) > 0:
+            if any_rev(sec_header_good,unicodedata.normalize("NFD",line.casefold()).replace("  "," ")):
+                print(line+"******************")
+                print(next(lineiterator))
+                for i in range(1000):
+                    l = next(lineiterator)
+                    print(l)
+                    if not any_rev(sec_header_bad,unicodedata.normalize("NFD",l.casefold()).replace("  "," ")):
+                        f.write(l+"\n")
+                    else:  
+                        break
+                break
+    f.close()
 
 def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
-	pdf_dir = clean_path(pdf_dir)
-	output_dir = clean_path(output_dir)
-	for f in os.listdir(pdf_dir):
-		if f.endswith(".pdf"):
-			print(pdf_dir+f)
-			extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
+    pdf_dir = clean_path(pdf_dir)
+    output_dir = clean_path(output_dir)
+    for f in os.listdir(pdf_dir):
+        if f.endswith(".pdf"):
+            print(pdf_dir+f)
+            extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
 
 def unpack_pdfextract(s):
-	a = s.split(",")
-	print(a[0])
-	extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
+    a = s.split(",")
+    print(a[0])
+    extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
 
 def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):
-	pdf_dir = clean_path(pdf_dir)
-	output_dir = clean_path(output_dir)
-	pool = Pool(num_threads)
-	pack = []
-	for f in os.listdir(pdf_dir):
-		if f.endswith(".pdf"):
-			pack.append(pdf_dir+f+","+output_dir+f.split(".pdf")[0]+".txt,"+'$'.join(sec_header_good)+","+'$'.join(sec_header_bad))
-	results = pool.map(unpack_pdfextract, pack,4)
+    pdf_dir = clean_path(pdf_dir)
+    output_dir = clean_path(output_dir)
+    pool = Pool(num_threads)
+    pack = []
+    for f in os.listdir(pdf_dir):
+        if f.endswith(".pdf"):
+            pack.append(pdf_dir+f+","+output_dir+f.split(".pdf")[0]+".txt,"+'$'.join(sec_header_good)+","+'$'.join(sec_header_bad))
+    results = pool.map(unpack_pdfextract, pack,4)
 
 """**************************************"""
 """END MATERIALS SECTION PARSER FUNCTIONS"""
@@ -208,23 +248,23 @@ def get_materials_folder_thread(pdf_dir,output_dir,sec_header_good,sec_header_ba
 """*****************************"""
 
 def post_science_parse(s):
-	a=s.split("+")
-	print(a[0])
-	try:
-		with open(a[0], 'rb') as f:
-			r = requests.post('http://localhost:8080/v1', files={a[0]: f})
-			open(a[1]+a[0].split('/')[-1][0:-4]+'.json','w',encoding='utf-8').write(r.text)
-	except Exception as e:
-		print("ERROR "+str(e))
+    a=s.split("+")
+    print(a[0])
+    try:
+        with open(a[0], 'rb') as f:
+            r = requests.post('http://localhost:8080/v1', files={a[0]: f})
+            open(a[1]+a[0].split('/')[-1][0:-4]+'.json','w',encoding='utf-8').write(r.text)
+    except Exception as e:
+        print("ERROR "+str(e))
 
 def get_pdf_json(pdf_dir,out_dir,num_thread=2):
-	pdf_dir = clean_path(pdf_dir)
-	out_dir = clean_path(out_dir)
-	pool = Pool(num_thread)
-	pack = []
-	for line in os.listdir(pdf_dir):
-		pack.append(pdf_dir+line+"+"+out_dir)
-	results = pool.map(post_science_parse,pack)
+    pdf_dir = clean_path(pdf_dir)
+    out_dir = clean_path(out_dir)
+    pool = Pool(num_thread)
+    pack = []
+    for line in os.listdir(pdf_dir):
+        pack.append(pdf_dir+line+"+"+out_dir)
+    results = pool.map(post_science_parse,pack)
 
 """***************************"""
 """END SCIENCE-PARSE SERVER FUNCTIONS"""
@@ -273,7 +313,7 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 
 	
 	#Dump unedited table into backup csv
-	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(bkup_csv_path, index=False,sep = '♠')
+	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(bkup_csv_path, index=False,sep = '\t')
 
 	#read unwanted headers from csv file
 	re = csv.reader(open(exclude_path,'r',encoding='utf-8'))
@@ -355,7 +395,7 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 						inf = 1 
 				except:
 					#idk python
-					s='||-//'
+					s='||-//'		
 		#update entry in table with new sec_head and if that sec_head was inferred (i.e changed by this code block)
 		cur.execute("UPDATE temp_table SET sec_head = ?, inferred = ? WHERE sec_num = ? AND id = ? AND split_num = ?", (cur_head, inf, row[3], row[2], row[4]))
 
@@ -370,8 +410,8 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 	cur.execute("DELETE from temp_table WHERE (upper_to_lower > ? AND digit_to_char > ?) OR upper_to_lower > ? OR digit_to_char > ?;",(both_upper,both_digit,uppper,digit)) 
 
 	#get the remaining entries in the table and write them to csv
-	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(csv_out_path, index=False)
-	
+	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(csv_out_path, index=False,sep = '\t') 
+    
 """**************************"""
 """END JSON PARSING FUNCTIONS"""
 
@@ -381,43 +421,43 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 """***************************"""
 #make list of PubMed ids from PubMed csv
 def get_pmedid_csv(csv_file_path,output_path):
-	out = open(output_path,'w')
-	with open(csv_file_path, encoding='utf-8') as csvf:
-		re = csv.reader(csvf, delimiter=',')
-		for row in re:
-			out.write(row[9]+"\n")
-	out.close()
+    out = open(output_path,'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        re = csv.reader(csvf, delimiter=',')
+        for row in re:
+            out.write(row[9]+"\n")
+    out.close()
 
 #Take PubMed csv at csv_file_path.
 #Make list of entries with PMCID format "PMCID+PUBMEDID" at pmc_path.
 #Make list of entries with no PMCID at nopmc_path.
 def get_pmcid_csv(csv_file_path,pmc_path,nopmc_path):
-	pmc = open(pmc_path,'w')
-	nopmc = open(nopmc_path,'w')
-	with open(csv_file_path, encoding='utf-8') as csvf:
-		re = csv.reader(csvf, delimiter=',')
-		for row in re:
-			if "PMCID:" in row[7]:
-				pmc.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
-			else:
-				nopmc.write(row[9]+"\n")
-	pmc.close()
-	nopmc.close()
+    pmc = open(pmc_path,'w')
+    nopmc = open(nopmc_path,'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        re = csv.reader(csvf, delimiter=',')
+        for row in re:
+            if "PMCID:" in row[7]:
+                pmc.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
+            else:
+                nopmc.write(row[9]+"\n")
+    pmc.close()
+    nopmc.close()
 
 #Add PMCID to PUBMEDIDs in pmed_id_path txt.
 #Output results in format "PMCID+PUBMEDID" to output_path.
 def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
-	out = open(output_path,'w')
-	for i in open(pmed_id_path,'r'):
-		print(i.strip())
-		with open(csv_file_path, encoding='utf-8') as csvf:
-			   re = csv.reader(csvf, delimiter=',')
-			   for row in re:
-				   if(row[9] in i):
-					   print("good")
-					   out.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
-					   break
-	out.close()
+    out = open(output_path,'w')
+    for i in open(pmed_id_path,'r'):
+        print(i.strip())
+        with open(csv_file_path, encoding='utf-8') as csvf:
+               re = csv.reader(csvf, delimiter=',')
+               for row in re:
+                   if(row[9] in i):
+                       print("good")
+                       out.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
+                       break
+    out.close()
 
 """*************************"""
 """END CSV PARSING FUNCTIONS"""
@@ -429,129 +469,130 @@ def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
 #Removes duplicate lines in txt file located at in_path
 #Outputs to out_path
 def remove_dupes_txt(in_path, out_path):
-	lines_seen = set()
-	outfile = open(out_path, "w")
-	for line in open(in_path, "r"):
-		if line not in lines_seen:
-			outfile.write(line)
-			lines_seen.add(line)
-	outfile.close()
+    lines_seen = set()
+    outfile = open(out_path, "w")
+    for line in open(in_path, "r"):
+        if line not in lines_seen:
+            outfile.write(line)
+            lines_seen.add(line)
+    outfile.close()
 
 #Counts the number of txts in id_txt_list.
 #Counts the number of pdfs in pdf_dir_list.
 #Returns the sum of pdf and txts: sum should equal 96961.
 def get_count(id_txt_list, pdf_dir_list):
-	c=0
-	for txt in id_txt_list:
-		c+= sum(1 for line in open(txt))
-	for d in pdf_dir_list:
-		c+=len(os.listdir(d))
-	return c
+    c=0
+    for txt in id_txt_list:
+        c+= sum(1 for line in open(txt))
+    for d in pdf_dir_list:
+        c+=len(os.listdir(d))
+    return c
 
 def any_rev(array,string):
-	for i in array:
-		if i in string:
-			return True
-	return False
+    for i in array:
+        if i in string:
+            return True
+    return False
 
 def convert_pdf_to_txt(path):
-	rsrcmgr = PDFResourceManager()
-	retstr = StringIO()
-	codec = 'utf-8'
-	laparams = LAParams()
-	device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
-	fp = open(path, 'rb')
-	interpreter = PDFPageInterpreter(rsrcmgr, device)
-	password = ""
-	maxpages = 0
-	caching = True
-	pagenos=set()
+    rsrcmgr = PDFResourceManager()
+    retstr = StringIO()
+    codec = 'utf-8'
+    laparams = LAParams()
+    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+    fp = open(path, 'rb')
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    password = ""
+    maxpages = 0
+    caching = True
+    pagenos=set()
 
-	for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password,caching=caching, check_extractable=True):
-		interpreter.process_page(page)
+    for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password,caching=caching, check_extractable=True):
+        interpreter.process_page(page)
 
-	text = retstr.getvalue()
+    text = retstr.getvalue()
 
-	fp.close()
-	device.close()
-	retstr.close()
-	return text
+    fp.close()
+    device.close()
+    retstr.close()
+    return text
 
 def rem_pmcid(in_path,out_path):
-	with open(in_path,'r') as inF:
-		with open(out_path,'w') as outF:
-			for line in inF:
-				outF.write(line.split('+')[1])
+    with open(in_path,'r') as inF:
+        with open(out_path,'w') as outF:
+            for line in inF:
+                outF.write(line.split('+')[1])
 
 def split_every(n, s):
-	return [ s[i:i+n] for i in range(0, len(s), n) ]
+    return [ s[i:i+n] for i in range(0, len(s), n) ]
 
 def clean_path(path):
-	if path[-1]!="/":
-		return path+"/"
-	else:
-		return path
+    if path[-1]!="/":
+        return path+"/"
+    else:
+        return path
 
 def clean_sql(s):
-	return ''.join([i if ord(i) < 128 else '' for i in s]).replace("\t",' ').replace("\n",' ')
+    return ''.join([i if ord(i) < 128 else '' for i in s]).replace("\t",' ').replace("\n",' ').replace("\r"," ")
 
 def get_empty_files(pdf_dir,out_path):
-	out = open(out_path,'w')
-	for f in os.listdir(os.fsencode(pdf_dir)):
-		if os.stat(str(pdf_dir)+"/"+f.decode('utf-8')).st_size == 0:
-			out.write(f.decode('utf-8').split("/")[-1].split(".pdf")[0]+"\n")
-	out.close()
+    out = open(out_path,'w')
+    for f in os.listdir(os.fsencode(pdf_dir)):
+        if os.stat(str(pdf_dir)+"/"+f.decode('utf-8')).st_size == 0:
+            out.write(f.decode('utf-8').split("/")[-1].split(".pdf")[0]+"\n")
+    out.close()
 
 def sort_nonretrievable(csv_file_path, good_out_path, bad_out_path):
-	good_pdf= open(good_out_path, 'w')
-	bad_pdf = open(bad_out_path, 'w')
-	with open(csv_file_path, encoding='utf-8') as csvf:
-		readCSV = csv.reader(csvf, delimiter=',')
-		for row in readCSV:
-			if "doi:" not in row[3] and "PMCID" not in row[7]:
-				print("BAD: "+row[9])
-				bad_pdf.write(row[9]+"\n")
-			else:
-				print("GOOD: "+row[9])
-				good_pdf.write(row[9]+"\n")
-	
-		good_pdf.close()
-		bad_pdf.close()
-		
+    good_pdf= open(good_out_path, 'w')
+    bad_pdf = open(bad_out_path, 'w')
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        readCSV = csv.reader(csvf, delimiter=',')
+        for row in readCSV:
+            if "doi:" not in row[3] and "PMCID" not in row[7]:
+                print("BAD: "+row[9])
+                bad_pdf.write(row[9]+"\n")
+            else:
+                print("GOOD: "+row[9])
+                good_pdf.write(row[9]+"\n")
+    
+        good_pdf.close()
+        bad_pdf.close()
+        
 def txt_diff(txt1,txt2,out_txt):
-	t1 = open(txt1,'r').readlines()
-	t2 = open(txt2,'r').readlines()
-	open(out_txt,'w').writelines(list(set(t1)-set(t2)))
+    t1 = open(txt1,'r').readlines()
+    t2 = open(txt2,'r').readlines()
+    open(out_txt,'w').writelines(list(set(t1)-set(t2)))
 
 def upper_ratio(s):
-	if len(s)==0:
-		return 0
-	u = len(re.findall('[A-Z]',s))
-	l = len(re.findall('[a-z]',s))
-	if u+l==0:
-		return 0
-	return u/(u+l)
+    if len(s)==0:
+        return 0
+    u = len(re.findall('[A-Z]',s))
+    l = len(re.findall('[a-z]',s))
+    if u+l==0:
+        return 0
+    return u/(u+l)
 
 def digit_ratio(s):
-	if len(s)==0:
-		return 0
-	d = len(re.findall('[0-9]',s))
-	c = len(re.findall('[A-z]',s))
-	if c+d==0:
-		return 0
-	return d/(c+d)
+    if len(s)==0:
+        return 0
+    d = len(re.findall('[0-9]',s))
+    c = len(re.findall('[A-z]',s))
+    if c+d==0:
+        return 0
+    return d/(c+d)
 
 def special_ratio(s):
-	if len(s)==0:
-		return 0
-	c = len(re.findall('[A-z]',s))
-	s = len(re.findall('[\\.\\!\\@\\#\\$\\%\\^\\&\\*\\(\\)\\_\\+\\-\\=]',s))
-	if c+s==0:
-		return 0
-	return s/(c+s)
+    if len(s)==0:
+        return 0
+    c = len(re.findall('[A-z]',s))
+    s = len(re.findall('[\\.\\!\\@\\#\\$\\%\\^\\&\\*\\(\\)\\_\\+\\-\\=]',s))
+    if c+s==0:
+        return 0
+    return s/(c+s)
 
 """*********************"""
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
-	run_json_folder('C:/Users/pnb9/Documents/SHIP2018-master/outJSONsmall','C:/Users/pnb9/Documents/SHIP2018-master/exclude.csv','C:/Users/pnb9/Documents/SHIP2018-master/chars.csv','bkup.txt','data_10_45_1128.csv')
+    #run_id_ruby('kick_first_run.txt','kick_second_run.txt',num_threads=7)
+    get_liebert('kick_second_run.txt','liebert.txt','not_liebert.txt',num_threads=60)
