@@ -15,6 +15,7 @@ import requests
 import sqlite3
 import json
 import re
+from http.cookiejar import CookieJar
 
 """BEGIN RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
 """*********************************************"""
@@ -56,6 +57,14 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
             f.write(i)
     return datetime.now()-start
 
+
+"""********************************************"""
+"""END RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
+
+
+"""BEGIN PMC URL SORTING FUNCTIONS"""
+"""*******************************"""
+
 def process_liebert(line):
     #output PubMed id of document being run through ruby script
     try:
@@ -64,7 +73,9 @@ def process_liebert(line):
         url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
         print(url)
         req = urllib.request.Request(url, headers = headers)
-        resp = urllib.request.urlopen(req)
+        cj = CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        resp = opener.open(req)
         if "liebertpub" in resp.geturl():
             return line
         else:
@@ -73,8 +84,6 @@ def process_liebert(line):
         print(str(e))
     #the ruby script uses alot of console warnings that mainly come to stderr
     #if the dl failed return the id to be added to list of failed ids
-    if "liebertpub" in resp.geturl():
-        return line
     #if the dl is successful return no id (empty string)
     return ""
 
@@ -84,20 +93,51 @@ def get_liebert(id_txt,out_txt, not_out_txt,num_threads=10):
     #use Pool.map to have the worker pool take ids in chunks from txt
     #and run them though ruby script using the process_line function
     #results will be failed with the ids that failed to dl
+    results = []
     with open(id_txt) as source_file:
-        try:
-            results = pool.map(process_liebert, source_file)
-        except:
-            s = "||-//"
-
+        results = pool.map(process_liebert, source_file)
     #write the list of failed ids to file
     with open(out_txt,'w') as f:
         for i in results:
             f.write(i)
     txt_diff(id_txt,out_txt,not_out_txt)
 
-"""********************************************"""
-"""END RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
+def sort_url_process(line):
+    try:
+        headers = {}
+        headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
+        print(line.strip())
+        req = urllib.request.Request(url, headers = headers)
+        cj = CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        resp = opener.open(req)
+        found = urllib.parse.urlparse(resp.geturl()).netloc
+        return (found+"||"+line.strip())
+    except Exception as e:
+        print(str(e))
+        return ("error:"+str(e)+"||"+line.strip())
+    #the ruby script uses alot of console warnings that mainly come to stderr
+    #if the dl failed return the id to be added to list of failed ids
+    #if the dl is successful return no id (empty string)
+
+def sort_url(id_txt,out_csv,num_threads=10):
+    pool = Pool(num_threads)
+
+    #use Pool.map to have the worker pool take ids in chunks from txt
+    #and run them though ruby script using the process_line function
+    #results will be failed with the ids that failed to dl
+    with open(id_txt) as source_file:
+        results = pool.map(sort_url_process, source_file)
+
+    #write the list of failed ids to file
+    f = csv.writer(open(out_csv,'w'),lineterminator="\n")
+    for i in results:
+        f.writerow(i.split("||"))
+
+
+"""*****************************"""
+"""END PMC URL SORTING FUNCTIONS"""
 
 
 """BEGIN PMC DOWLOAD FUNCTIONS"""
@@ -459,6 +499,14 @@ def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
                        break
     out.close()
 
+def count_heads(csv_file_path):
+    seen = []
+    for row in csv.reader(open(csv_file_path,'r')):
+        if row[0] not in seen:
+            seen.append(row[0])
+    return len(seen)
+
+
 """*************************"""
 """END CSV PARSING FUNCTIONS"""
 
@@ -594,5 +642,4 @@ def special_ratio(s):
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
-    #run_id_ruby('kick_first_run.txt','kick_second_run.txt',num_threads=7)
-    get_liebert('kick_second_run.txt','liebert.txt','not_liebert.txt',num_threads=60)
+    run_id_ruby('ids_run_next.txt','kick_third_run.txt',num_threads=7)

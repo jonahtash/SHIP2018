@@ -26,6 +26,8 @@
 
 require 'camping'
 require 'mechanize'
+require 'selenium-webdriver'
+require 'nokogiri'
 
 Camping.goes :Pdfetch
 
@@ -50,6 +52,7 @@ class Fetch
         success = true
       else
         m = Mechanize.new { |a| a.keep_alive = 1 }
+		m.request_headers = {'user-agent' => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"}
         # set the mechanize pluggable parser for pdf files to the empty class Reprint, as a way to check for it later
         m.pluggable_parser.pdf = Reprint
         begin
@@ -83,6 +86,8 @@ class Pdfetch::Finders
   # Pass a finder the mechanize agent (m) and the pubmed linkout page (p), and
   # it will return either the pdf reprint or nil.
 
+  
+  
   def zeneric(m,p) # this finder has been renamed 'zeneric' instead of 'generic' to have it called last (as last resort)
     begin
       page = m.click p.links_with(:text  => /pdf|full[\s-]?text|reprint/i, :href => /.pdf$/i)[0]
@@ -111,12 +116,64 @@ class Pdfetch::Finders
       return nil
     end
   end
+  
+  def ascience_direct(m,p)
+    begin
+		if not p.uri.to_s.include? "linkinghub.elsevier"
+			return nil
+			else
+		end
+		browser = Selenium::WebDriver.for :chrome
+		browser.navigate.to p.uri
+		browser.find_element(:id => "pdfLink").click
+		browser.find_element(:link =>"Article").click
+		doc = Nokogiri::HTML(browser.page_source)
+		browser.navigate.to doc.at('meta[name="citation_pdf_url"]')['content']
+		page = m.get(browser.current_url)
+	  if page.kind_of? Reprint
+        warn "** fetching reprint using the 'science direct 2' finder..."
+        return page
+      else
+        return nil
+      end
+    rescue
+      return nil
+    end
+  end
+  def academic_ox(m,p)
+	begin
+		doc = Nokogiri::HTML(p.body)
+		page = m.get(doc.at('meta[name="citation_pdf_url"]')['content'])
+      if page.kind_of? Reprint
+        warn "** fetching reprint using the 'oxford academic' finder..."
+        return page
+      else
+        return nil
+      end
+    rescue
+      return nil
+    end
+	end
 
   def springer_link(m,p)
     begin
-      page = m.click p.links_with(:href  => /fulltext.pdf$/i)[0]
+	  page = m.click p.links_with(:href  => /fulltext.pdf$/i)[0]
       if page.kind_of? Reprint
         warn "** fetching reprint using the 'springer link' finder..."
+        return page
+      else
+        return nil
+      end
+    rescue
+      return nil
+    end
+  end
+  
+  def aspringer_link_two(m,p)
+    begin
+	  page = m.click p.links_with(:href  => /content\/pdf/i)[0]
+	  if page.kind_of? Reprint
+        warn "** fetching reprint using the 'springer link two' finder..."
         return page
       else
         return nil
@@ -288,7 +345,7 @@ class Pdfetch::Finders
 
   def pubmed_central(m,p)
     begin
-      # raise unless p.uri =~ /pubmedcentral/i
+	  # raise unless p.uri =~ /pubmedcentral/i
       page = m.click p.links_with(:text => /pdf/i, :href => /pdf/i)[0]
       if page.kind_of? Reprint
         warn "** fetching reprint using the 'pubmed central' finder..."
