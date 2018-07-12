@@ -16,6 +16,9 @@ import sqlite3
 import json
 import re
 from http.cookiejar import CookieJar
+from bs4 import BeautifulSoup
+import pandas as pd
+import shutil
 
 """BEGIN RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
 """*********************************************"""
@@ -62,37 +65,46 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
 """END RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
 
 
-"""BEGIN PMC URL SORTING FUNCTIONS"""
-"""*******************************"""
+"""BEGIN URL SORTING FUNCTIONS"""
+"""***************************"""
 
+#func to process ids to if the from inacessable db liebert
 def process_liebert(line):
-    #output PubMed id of document being run through ruby script
     try:
+        #build request
         headers = {}
+        #ie user-agent string
         headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        #use nih eutil to get link that redirects to the doi url for each article
         url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
         print(url)
         req = urllib.request.Request(url, headers = headers)
+        #site was refusing robot connection so cookie jar is used to bypass
         cj = CookieJar()
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         resp = opener.open(req)
+
+        #check to see if the doi url redirected to liebert db site
         if "liebertpub" in resp.geturl():
             return line
         else:
             return ""
     except Exception as e:
         print(str(e))
-    #the ruby script uses alot of console warnings that mainly come to stderr
-    #if the dl failed return the id to be added to list of failed ids
-    #if the dl is successful return no id (empty string)
+
+    #this return is called if an error occurs while attempting to get the doi url
+    #assume its not liebert so it can be checked again
     return ""
 
+#takes input list of PubMed ids and splits based on which ids' doi link redirects to the journal site "liebertpub"
+#articles on the site are paywalled and therefore ingnored during pdf collection
+#id_txt path to txt with list of ids to b split
+#out_txt output path of article ids that are located on liebert site
+#not_out_txt output path of article ids that are not located on liebert site
 def get_liebert(id_txt,out_txt, not_out_txt,num_threads=10):
     pool = Pool(num_threads)
 
-    #use Pool.map to have the worker pool take ids in chunks from txt
-    #and run them though ruby script using the process_line function
-    #results will be failed with the ids that failed to dl
+    #same Pool.map to map liebert process function to an input list of PubMed ids
     results = []
     with open(id_txt) as source_file:
         results = pool.map(process_liebert, source_file)
@@ -102,24 +114,31 @@ def get_liebert(id_txt,out_txt, not_out_txt,num_threads=10):
             f.write(i)
     txt_diff(id_txt,out_txt,not_out_txt)
 
+#func to process urls for url domain sorting function
+#line is PubMed id
 def sort_url_process(line):
     try:
+        #build request
         headers = {}
+        #ie user-agent
         headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        #use nih eutil to get link that redirects to the doi url for each article
         url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
         print(line.strip())
         req = urllib.request.Request(url, headers = headers)
+        #use cookie jar to bypass robot blockers
         cj = CookieJar()
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         resp = opener.open(req)
+        #use urllib urlparse to extract domain name from url that the doi link redirected to
         found = urllib.parse.urlparse(resp.geturl()).netloc
+        #return the the domain name of the doi link of the article and the PubMed id of that article delimeted by ||
         return (found+"||"+line.strip())
     except Exception as e:
         print(str(e))
+        #if an error occurs return the domain name as "error:*the error mesage*"
         return ("error:"+str(e)+"||"+line.strip())
-    #the ruby script uses alot of console warnings that mainly come to stderr
-    #if the dl failed return the id to be added to list of failed ids
-    #if the dl is successful return no id (empty string)
+
 
 def sort_url(id_txt,out_csv,num_threads=10):
     pool = Pool(num_threads)
@@ -136,8 +155,54 @@ def sort_url(id_txt,out_csv,num_threads=10):
         f.writerow(i.split("||"))
 
 
-"""*****************************"""
-"""END PMC URL SORTING FUNCTIONS"""
+def count_domain(in_csv,out_csv):
+    domains = {}
+    for row in csv.reader(open(in_csv,'r')):
+        if row[0] in domains:
+            domains[row[0]] = domains[row[0]]+1
+        else:
+            domains[row[0]] = 1
+    w = csv.writer(open(out_csv,'w'),lineterminator="\n")
+    for k in domains.keys():
+        w.writerow([k,domains[k]])
+
+def get_ox_paywall(id_txt,out_txt,num_threads=10):
+    pool = Pool(num_threads)
+
+    #use Pool.map to have the worker pool take ids in chunks from txt
+    #and run them though ruby script using the process_line function
+    #results will be failed with the ids that failed to dl
+    with open(id_txt) as source_file:
+        results = pool.map(get_ox_paywall_process, source_file)
+
+    #write the list of failed ids to file
+    f =open(out_txt,'w')
+    for i in results:
+        f.write(i)
+
+def get_ox_txt(in_csv,out_txt):
+    out = open(out_txt,'a')
+    for row in csv.reader(open(in_csv,'r')):
+        if row[0]=="academic.oup.com":
+            out.write(row[1]+"\n")
+    out.close()
+
+def get_ox_paywall_process(line):
+    headers = {}
+    headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+    url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
+    print(line.strip())
+    req = urllib.request.Request(url, headers = headers)
+    cj = CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    resp = opener.open(req)
+    soup = BeautifulSoup(resp.read(), 'html.parser')
+    if soup.find(id="PermissionsLink"):
+        return line
+    return ""
+
+"""*************************"""
+"""END URL SORTING FUNCTIONS"""
 
 
 """BEGIN PMC DOWLOAD FUNCTIONS"""
@@ -353,7 +418,7 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 
 	
 	#Dump unedited table into backup csv
-	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(bkup_csv_path, index=False,sep = '\t')
+	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(bkup_csv_path, index=False,sep = ',',quoting=csv.QUOTE_NONNUMERIC)
 
 	#read unwanted headers from csv file
 	re = csv.reader(open(exclude_path,'r',encoding='utf-8'))
@@ -420,12 +485,13 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 				bs += a[c]+" "
 				c+=1
 			#set to be header
-			cur_head = bs[:-1]
-			inf = 1
+			if len(bs[:-1])>1:
+                            cur_head = bs[:-1]
+                            inf = 1
 		else:
 			#open csv with characters that denote heading
 			#for each character see if that character comes before the end of the first sentence
-			for line in csv.reader(open(char_path, encoding='utf-8')):
+			for line in csv.reader(open(char_path, 'r')):
 				try:
 					i = text.index(line[0].strip())
 					#check to see if text in this format
@@ -450,8 +516,32 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 	cur.execute("DELETE from temp_table WHERE (upper_to_lower > ? AND digit_to_char > ?) OR upper_to_lower > ? OR digit_to_char > ?;",(both_upper,both_digit,uppper,digit)) 
 
 	#get the remaining entries in the table and write them to csv
-	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(csv_out_path, index=False,sep = '\t') 
+	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(csv_out_path, index=False,sep = ',',quoting=csv.QUOTE_NONNUMERIC) 
+
+def partition_jsons(json_dir,partition_dir,json_per_folder):
+    files = [os.path.join(json_dir, f) for f in os.listdir(json_dir)]
+    i = 0
+    curr_subdir = None
+    name = ""
+    if len(json_dir.split("/")[-1])>1:
+        name = json_dir.split("/")[-1]
+    else:
+        name=json_dir.split("/")[-2]
     
+    for f in files:
+        # create new subdir if necessary
+        if i % json_per_folder == 0:
+            subdir_name = os.path.join(partition_dir, name+'{0:04d}'.format(int(i / json_per_folder + 1)))
+            if not os.path.exists(subdir_name):
+                os.mkdir(subdir_name)
+            curr_subdir = subdir_name
+
+        # move file to current dir
+        f_base = os.path.basename(f)
+        shutil.copy(f, os.path.join(subdir_name, f_base))
+        i += 1
+
+
 """**************************"""
 """END JSON PARSING FUNCTIONS"""
 
@@ -642,4 +732,6 @@ def special_ratio(s):
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
-    run_id_ruby('ids_run_next.txt','kick_third_run.txt',num_threads=7)
+    #run_id_ruby('ids_run_next.txt','kick_third_run.txt',num_threads=7)
+    run_json_folder("C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall",'C:/Users/jnt11/Documents/SHIPFiles/exclude.csv','C:/Users/jnt11/Documents/SHIPFiles/char.csv','bkup.csv','sample_data.csv')
+    #partition_jsons("C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall","C:/Users/jnt11/Documents/SHIPFiles/testPart",10)
