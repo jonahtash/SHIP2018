@@ -4,10 +4,10 @@ from datetime import datetime
 import subprocess
 import csv
 import urllib.request
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+"""from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
-from pdfminer.pdfpage import PDFPage
+from pdfminer.pdfpage import PDFPage"""
 from io import StringIO
 import unicodedata
 import ctypes
@@ -211,7 +211,7 @@ def _get_ox_paywall_process(line):
 #Download pdf at download_url from PMC website.
 #Save pdf to folder at pdf_output_dir and name pdf pmed_id.
 #Output failed downloads to kickback_path txt.
-def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
+def _download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
     kick = open(kickback_path,'a')
     try:
         #assemble http request. PMC is sus if you don't have User-Agent header
@@ -233,7 +233,7 @@ def download_pdf_fromid(download_url,pmed_id,pdf_output_dir,kickback_path):
 #Download pdfs of entries in txt at id_file_path.
 #Downloads pdfs to pdf_output_dir.
 #Output failed downloads to kickback_path.
-def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
+def _get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
     pdf_output_dir = clean_path(pdf_output_dir)
     with open(id_file_path,'r') as f:
         for line in f:
@@ -243,7 +243,7 @@ def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path):
             print(a[0]+" "+a[1].strip())
 
 #helper func for threaded dl
-def unpack(s):
+def _unpack(s):
     a = s.split("+")
     print(a[0]+" "+a[1].strip())
     download_pdf_fromid("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
@@ -283,7 +283,7 @@ def download_pdf_errors(download_url,pmed_id,pdf_output_dir):
     e403_ban.close()
     e403_rem.close()
 
-def unpack_error(s):
+def _unpack_error(s):
     a = s.split("+")
     print(a[0]+" "+a[1].strip())
     download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
@@ -310,7 +310,7 @@ def extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_ba
     for line in lineiterator:
         if len(unicodedata.normalize("NFD",line.casefold()).replace("  "," ").strip()) > 0:
             if any_rev(sec_header_good,unicodedata.normalize("NFD",line.casefold()).replace("  "," ")):
-                print(line+"******************")
+                #print(line+"******************")
                 print(next(lineiterator))
                 for i in range(1000):
                     l = next(lineiterator)
@@ -322,7 +322,7 @@ def extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_ba
                 break
     f.close()
 
-def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
+def _get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
     pdf_dir = clean_path(pdf_dir)
     output_dir = clean_path(output_dir)
     for f in os.listdir(pdf_dir):
@@ -330,7 +330,7 @@ def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):
             print(pdf_dir+f)
             extract_materials_section(pdf_dir+f,output_dir+f.split(".pdf")[0]+".txt",sec_header_good,sec_header_bad)
 
-def unpack_pdfextract(s):
+def _unpack_pdfextract(s):
     a = s.split(",")
     print(a[0])
     extract_materials_section(a[0],a[1],a[2].split('$'),a[3].split('$'))
@@ -362,7 +362,7 @@ def post_science_parse(s):
     except Exception as e:
         print("ERROR "+str(e))
 
-def get_pdf_json(pdf_dir,out_dir,num_thread=2):
+def _get_pdf_json(pdf_dir,out_dir,num_thread=2):
     pdf_dir = clean_path(pdf_dir)
     out_dir = clean_path(out_dir)
     pool = Pool(num_thread)
@@ -521,7 +521,7 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 	#get the remaining entries in the table and write them to csv
 	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(csv_out_path, index=False,sep = ',',quoting=csv.QUOTE_NONNUMERIC) 
 
-def partition_jsons(json_dir,partition_dir,json_per_folder):
+def _partition_jsons(json_dir,partition_dir,json_per_folder):
     files = [os.path.join(json_dir, f) for f in os.listdir(json_dir)]
     i = 0
     curr_subdir = None
@@ -562,7 +562,7 @@ def run_partition_folders(part_folder_dir,out_csv_dir,exclude_path,char_path,lim
 """BEGIN CSV PARSING FUNCTIONS"""
 """***************************"""
 #make list of PubMed ids from PubMed csv
-def get_pmedid_csv(csv_file_path,output_path):
+def _get_pmedid_csv(csv_file_path,output_path):
     out = open(output_path,'w')
     with open(csv_file_path, encoding='utf-8') as csvf:
         re = csv.reader(csvf, delimiter=',')
@@ -588,7 +588,7 @@ def get_pmcid_csv(csv_file_path,pmc_path,nopmc_path):
 
 #Add PMCID to PUBMEDIDs in pmed_id_path txt.
 #Output results in format "PMCID+PUBMEDID" to output_path.
-def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
+def _csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
     out = open(output_path,'w')
     for i in open(pmed_id_path,'r'):
         print(i.strip())
@@ -601,7 +601,7 @@ def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
                        break
     out.close()
 
-def count_heads(csv_file_path):
+def _count_heads(csv_file_path):
     seen = []
     for row in csv.reader(open(csv_file_path,'r')):
         if row[0] not in seen:
@@ -618,7 +618,7 @@ def count_heads(csv_file_path):
 
 #Removes duplicate lines in txt file located at in_path
 #Outputs to out_path
-def remove_dupes_txt(in_path, out_path):
+def _remove_dupes_txt(in_path, out_path):
     lines_seen = set()
     outfile = open(out_path, "w")
     for line in open(in_path, "r"):
@@ -630,7 +630,7 @@ def remove_dupes_txt(in_path, out_path):
 #Counts the number of txts in id_txt_list.
 #Counts the number of pdfs in pdf_dir_list.
 #Returns the sum of pdf and txts: sum should equal 96961.
-def get_count(id_txt_list, pdf_dir_list):
+def _get_count(id_txt_list, pdf_dir_list):
     c=0
     for txt in id_txt_list:
         c+= sum(1 for line in open(txt))
@@ -638,13 +638,13 @@ def get_count(id_txt_list, pdf_dir_list):
         c+=len(os.listdir(d))
     return c
 
-def any_rev(array,string):
+def _any_rev(array,string):
     for i in array:
         if i in string:
             return True
     return False
 
-def convert_pdf_to_txt(path):
+def _convert_pdf_to_txt(path):
     rsrcmgr = PDFResourceManager()
     retstr = StringIO()
     codec = 'utf-8'
@@ -667,32 +667,32 @@ def convert_pdf_to_txt(path):
     retstr.close()
     return text
 
-def rem_pmcid(in_path,out_path):
+def _rem_pmcid(in_path,out_path):
     with open(in_path,'r') as inF:
         with open(out_path,'w') as outF:
             for line in inF:
                 outF.write(line.split('+')[1])
 
-def split_every(n, s):
+def _split_every(n, s):
     return [ s[i:i+n] for i in range(0, len(s), n) ]
 
-def clean_path(path):
+def _clean_path(path):
     if path[-1]!="/":
         return path+"/"
     else:
         return path
 
-def clean_sql(s):
+def _clean_sql(s):
     return ''.join([i if ord(i) < 128 else '' for i in s]).replace("\t",' ').replace("\n",' ').replace("\r"," ")
 
-def get_empty_files(pdf_dir,out_path):
+def _get_empty_files(pdf_dir,out_path):
     out = open(out_path,'w')
     for f in os.listdir(os.fsencode(pdf_dir)):
         if os.stat(str(pdf_dir)+"/"+f.decode('utf-8')).st_size == 0:
             out.write(f.decode('utf-8').split("/")[-1].split(".pdf")[0]+"\n")
     out.close()
 
-def sort_nonretrievable(csv_file_path, good_out_path, bad_out_path):
+def _sort_nonretrievable(csv_file_path, good_out_path, bad_out_path):
     good_pdf= open(good_out_path, 'w')
     bad_pdf = open(bad_out_path, 'w')
     with open(csv_file_path, encoding='utf-8') as csvf:
@@ -708,7 +708,7 @@ def sort_nonretrievable(csv_file_path, good_out_path, bad_out_path):
         good_pdf.close()
         bad_pdf.close()
         
-def txt_diff(txt1,txt2,out_txt):
+def _txt_diff(txt1,txt2,out_txt):
     t1 = open(txt1,'r').readlines()
     t2 = open(txt2,'r').readlines()
     open(out_txt,'w').writelines(list(set(t1)-set(t2)))
