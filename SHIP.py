@@ -1,5 +1,5 @@
 import os
-from multiprocessing import Pool
+from multiprocessing.dummy import Pool
 from datetime import datetime
 import subprocess
 import csv
@@ -24,7 +24,7 @@ import shutil
 """*********************************************"""
 
 #func to process id in ruby script
-def process_line(line):
+def _process_line(line):
     #output PubMed id of document being run through ruby script
     print(line.strip())
     #pass id to ruby script and save output in buffer
@@ -49,10 +49,10 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
     pool = Pool(num_threads)
 
     #use Pool.map to have the worker pool take ids in chunks from txt
-    #and run them though ruby script using the process_line function
+    #and run them though ruby script using the _process_line function
     #results will be failed with the ids that failed to dl
     with open(file_path) as source_file:
-        results = pool.map(process_line, source_file)
+        results = pool.map(_process_line, source_file)
 
     #write the list of failed ids to file
     with open(kickback_path,'w') as f:
@@ -69,7 +69,7 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
 """***************************"""
 
 #func to process ids to if the from inacessable db liebert
-def process_liebert(line):
+def _process_liebert(line):
     try:
         #build request
         headers = {}
@@ -101,13 +101,13 @@ def process_liebert(line):
 #id_txt path to txt with list of ids to b split
 #out_txt output path of article ids that are located on liebert site
 #not_out_txt output path of article ids that are not located on liebert site
-def get_liebert(id_txt,out_txt, not_out_txt,num_threads=10):
+def _get_liebert(id_txt,out_txt, not_out_txt,num_threads=10):
     pool = Pool(num_threads)
 
     #same Pool.map to map liebert process function to an input list of PubMed ids
     results = []
     with open(id_txt) as source_file:
-        results = pool.map(process_liebert, source_file)
+        results = pool.map(_process_liebert, source_file)
     #write the list of failed ids to file
     with open(out_txt,'w') as f:
         for i in results:
@@ -116,7 +116,7 @@ def get_liebert(id_txt,out_txt, not_out_txt,num_threads=10):
 
 #func to process urls for url domain sorting function
 #line is PubMed id
-def sort_url_process(line):
+def _sort_url_process(line):
     try:
         #build request
         headers = {}
@@ -147,7 +147,7 @@ def sort_url(id_txt,out_csv,num_threads=10):
     #and run them though ruby script using the process_line function
     #results will be failed with the ids that failed to dl
     with open(id_txt) as source_file:
-        results = pool.map(sort_url_process, source_file)
+        results = pool.map(_sort_url_process, source_file)
 
     #write the list of failed ids to file
     f = csv.writer(open(out_csv,'w'),lineterminator="\n")
@@ -166,28 +166,28 @@ def count_domain(in_csv,out_csv):
     for k in domains.keys():
         w.writerow([k,domains[k]])
 
-def get_ox_paywall(id_txt,out_txt,num_threads=10):
+def _get_ox_paywall(id_txt,out_txt,num_threads=10):
     pool = Pool(num_threads)
 
     #use Pool.map to have the worker pool take ids in chunks from txt
     #and run them though ruby script using the process_line function
     #results will be failed with the ids that failed to dl
     with open(id_txt) as source_file:
-        results = pool.map(get_ox_paywall_process, source_file)
+        results = pool.map(_get_ox_paywall_process, source_file)
 
     #write the list of failed ids to file
     f =open(out_txt,'w')
     for i in results:
         f.write(i)
 
-def get_ox_txt(in_csv,out_txt):
+def _get_ox_txt(in_csv,out_txt):
     out = open(out_txt,'a')
     for row in csv.reader(open(in_csv,'r')):
         if row[0]=="academic.oup.com":
             out.write(row[1]+"\n")
     out.close()
 
-def get_ox_paywall_process(line):
+def _get_ox_paywall_process(line):
     headers = {}
     headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
     url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
@@ -441,23 +441,25 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 		cur.execute("UPDATE temp_table SET sec_num = ? WHERE sec_head = ? AND id = ?", (c, row[0], cur_id))
 		c+=1
 	
-	#go through and split up entries where the section text is longer than 4000 characters
-	#select all entries with sec. text longer than 4000 characters
-	cur.execute('SELECT * FROM temp_table WHERE length(text) > 4000 ORDER BY id,sec_num,split_num;')
+	#go through and split up entries where the section text is longer than split_on characters
+	#select all entries with sec. text longer than split_on characters
+	split_on = "3000"
+	cur.execute('SELECT * FROM temp_table WHERE length(text) > '+split_on+' ORDER BY id,sec_num,split_num;')
+
 	for row in cur.fetchall():
-		#split the sec. text of entry into 4000 character chunks and interate
+		#split the sec. text of entry into split_on character chunks and interate
 		bs = ""
 		c_split = 1
 		for s in [e+". " for e in row[1].split(". ") if e]:
 			#insert chunk of text into table
-			if len(bs + s) > 4000:  
+			if len(bs + s) > int(split_on):  
 				cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",(row[0],bs,str(row[2]),row[3],c_split,row[5],upper_ratio(bs),digit_ratio(bs),special_ratio(bs)))
 				c_split+= 1
 				bs = s
 			else:
 				bs+=s
 		#remove old entry
-		cur.execute("DELETE from temp_table WHERE sec_head like ? AND id=? AND length(text)>4000;",(row[0],str(row[2]))) 
+		cur.execute("DELETE from temp_table WHERE sec_head like ? AND id=? AND length(text)>"+split_on+";",(row[0],str(row[2]))) 
 		
 	##try to fix null headers
 	#get all rows with sec_head as null
@@ -476,12 +478,13 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 		text = row[1].strip()
 		#if the first word is all caps it's probably a title
 		#check if all caps
-		if (text[:text.index(' ')].upper().strip() == text[:text.index(' ')].strip() and text[:text.index(' ')].isalpha()):
+		
+		if (' ' in text and text[:text.index(' ')].upper().strip() == text[:text.index(' ')].strip() and text[:text.index(' ')].isalpha()):
 			a=text.split(' ')
 			c=0
 			bs = ""
 			#read words until words are no longer all caps
-			while(a[c]==a[c].upper()):
+			while(c < len(a) and a[c]==a[c].upper()):
 				bs += a[c]+" "
 				c+=1
 			#set to be header
@@ -541,6 +544,15 @@ def partition_jsons(json_dir,partition_dir,json_per_folder):
         shutil.copy(f, os.path.join(subdir_name, f_base))
         i += 1
 
+def run_partition_folders(part_folder_dir,out_csv_dir,exclude_path,char_path,limit=-1):
+    c = 0
+    out_csv_dir = clean_path(out_csv_dir)
+    for f in os.listdir(part_folder_dir):
+        folder = os.path.join(part_folder_dir, f)
+        print(folder)
+        run_json_folder(folder,exclude_path,char_path,out_csv_dir+f+"bkup.csv",out_csv_dir+f+"data.csv")
+        if limit>0 and c>=limit:
+            break
 
 """**************************"""
 """END JSON PARSING FUNCTIONS"""
@@ -727,11 +739,13 @@ def special_ratio(s):
     if c+s==0:
         return 0
     return s/(c+s)
-
+def _(s):
+    print(s+"foo")
 """*********************"""
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
     #run_id_ruby('ids_run_next.txt','kick_third_run.txt',num_threads=7)
-    run_json_folder("C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall",'C:/Users/jnt11/Documents/SHIPFiles/exclude.csv','C:/Users/jnt11/Documents/SHIPFiles/char.csv','bkup.csv','sample_data.csv')
+    #run_json_folder("C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall",'C:/Users/jnt11/Documents/SHIPFiles/exclude.csv','C:/Users/jnt11/Documents/SHIPFiles/char.csv','bkup.csv','sample_data.csv')
     #partition_jsons("C:/Users/jnt11/Documents/SHIPFiles/outJSONsmall","C:/Users/jnt11/Documents/SHIPFiles/testPart",10)
+    run_json_folder('json0001','exclude.csv','char.csv','bk.csv','data01.csv')
