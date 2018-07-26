@@ -43,6 +43,7 @@ def _process_line(line):
 
 #run ruby script on list of ids at file_path and output failed ids
 #to kickback_loc. Optional num_threads number of threads to run- default 10
+#recommended to run this function over multiprocessing
 def run_id_ruby(file_path,kickback_path,num_threads=10):
     #record start time to calculate total runtime later
     start = datetime.now()
@@ -65,6 +66,7 @@ def run_id_ruby(file_path,kickback_path,num_threads=10):
 
 #run ruby script on list of ids at file_path and output failed ids
 #to kickback_loc. Optional num_threads number of threads to run- default 10
+#multiprocessing version uses processes which opens multiple windows, not neccesary for ruby function
 def run_id_ruby_mp(file_path,kickback_path,num_threads=10):
     #record start time to calculate total runtime later
     start = datetime.now()
@@ -75,7 +77,7 @@ def run_id_ruby_mp(file_path,kickback_path,num_threads=10):
 
     #use Pool.map to have the worker pool take ids in chunks from txt
     #and run them though ruby script using the _process_line function
-    #results will be failed with the ids that failed to dl
+    #results will be failed with the ids that failed to download
     with open(file_path) as source_file:
         results = pool.map(_process_line, source_file)
 
@@ -87,18 +89,18 @@ def run_id_ruby_mp(file_path,kickback_path,num_threads=10):
 
 
 """********************************************"""
-"""END RUBY pudmebid2pdf INTERACTION FUNCTIONS"""
+"""END RUBY 'pudmebid2pdf' INTERACTION FUNCTIONS"""
 
 
 """BEGIN URL SORTING FUNCTIONS"""
 """***************************"""
 
-#func to process ids to if the from inacessable db liebert
+#func to process ids from inacessable db liebert
 def _process_liebert(line):
     try:
         #build request
         headers = {}
-        #ie user-agent string
+        #internet-explorer user-agent string
         headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
         #use nih eutil to get link that redirects to the doi url for each article
         url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
@@ -145,7 +147,7 @@ def _sort_url_process(line):
     try:
         #build request
         headers = {}
-        #ie user-agent
+        #internet-explorer user-agent
         headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
         #use nih eutil to get link that redirects to the doi url for each article
         url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
@@ -178,7 +180,9 @@ def sort_url(id_txt,out_csv,num_threads=10):
     f = csv.writer(open(out_csv,'w'),lineterminator="\n")
     for i in results:
         f.writerow(i.split("||"))
-
+        
+#multiprocessing version of "sort_url"
+#faster than the threaded version and opens several different windows
 def sort_url_mp(id_txt,out_csv,num_threads=10):
     pool = PoolMP(num_threads)
 
@@ -203,7 +207,8 @@ def count_domain(in_csv,out_csv):
     w = csv.writer(open(out_csv,'w'),lineterminator="\n")
     for k in domains.keys():
         w.writerow([k,domains[k]])
-
+        
+#sorts out the paywalled articles that are inaccesible on the Oxford Journal Website
 def _get_ox_paywall(id_txt,out_txt,num_threads=10):
     pool = Pool(num_threads)
 
@@ -218,23 +223,32 @@ def _get_ox_paywall(id_txt,out_txt,num_threads=10):
     for i in results:
         f.write(i)
 
+    
+#writes list of failed (paywalled) IDs from Oxford Journal Website
 def _get_ox_txt(in_csv,out_txt):
     out = open(out_txt,'a')
     for row in csv.reader(open(in_csv,'r')):
         if row[0]=="academic.oup.com":
             out.write(row[1]+"\n")
     out.close()
-
+    
+#Attempts to download the articles from the Oxford Journal Website 
 def _get_ox_paywall_process(line):
+    #build request
     headers = {}
+    #internet-explorer user-agent
     headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+    #use nih eutil to get link that redirects to the doi url for each article
     url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line.strip()+"&retmode=ref&cmd=prlinks"
     print(line.strip())
     req = urllib.request.Request(url, headers = headers)
+    #use cookie jar to bypass robot blockers
     cj = CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
     resp = opener.open(req)
+    #Uses the tool 'Beautiful Soup' to parse the HTML of the website
     soup = BeautifulSoup(resp.read(), 'html.parser')
+    #checks to see if the document is inaccesible
     if soup.find(id="PermissionsLink"):
         return line
     return ""
@@ -296,8 +310,9 @@ def get_from_pmcid(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
         pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
     results = pool.map(_unpack,pack)
 
-#Get_from_pmcid threaded version.
-#Default 10 threads.
+#Get_from_pmcid multiprocessing version
+#Default 10 threads
+#faster than ghet_from_pmcid, but opens multiple windows    
 def get_from_pmcid_mp(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
     pdf_output_dir = _clean_path(pdf_output_dir)
     pool = PoolMP(num_thread)
@@ -306,23 +321,28 @@ def get_from_pmcid_mp(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
         pack.append(line+"+"+pdf_output_dir+"+"+kickback_path)
     results = pool.map(_unpack,pack)
     pool.close()
-
+# trys to download from URLs that have previously failed
 def _download_pdf_errors(download_url,pmed_id,pdf_output_dir):
     e404 = open("error_404.txt",'a')
     e403_ban = open("error_403_ipBan.txt",'a')
     e403_rem = open("error_403_rem.txt",'a')
     try:
+        #assemble http request. PMC is sus if you don't have User-Agent header
         headers = {}
+        #set agent to Internet-Explorer
         headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
         req = urllib.request.Request(download_url, headers = headers)
         resp = urllib.request.urlopen(req)
         with open("./"+pdf_output_dir+pmed_id+".pdf",'wb') as f:
             f.write(resp.read())
             f.close()
+    #If there is an error 404 or error 403, then those IDs are written to a txt
     except Exception as e:
         print(str(e))
         if e.code == 404:
             e404.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
+        #PubMed Central Website bans batch downloading after a period of time
+        #If the computer's IP gets banned by PMC, all left over ID's are written to a txt
         if e.code == 403:
             if "Internet connection (IP address) was used to download content in bulk" in str(e.read()):
                 e403_ban.write(download_url[download_url.index("PMC"):download_url.index("/pdf/")]+"+"+pmed_id+"\n")
@@ -332,12 +352,15 @@ def _download_pdf_errors(download_url,pmed_id,pdf_output_dir):
     e403_ban.close()
     e403_rem.close()
 
+
 def _unpack_error(s):
     a = s.split("+")
     print(a[0]+" "+a[1].strip())
     _download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
                         a[1].strip(),a[2])
-
+#regular threaded function
+#deafult num threads is 2
+#function to name PDFs
 def get_error(id_file_path,pdf_output_dir,num_thread=2):
     pdf_output_dir = _clean_path(pdf_output_dir)
     pool = Pool(num_thread)
@@ -346,6 +369,8 @@ def get_error(id_file_path,pdf_output_dir,num_thread=2):
         pack.append(line+"+"+pdf_output_dir)
     results = pool.map(_unpack_error,pack)
 
+#multiprocessing version of get_error
+#default number of threads is 2
 def get_error_mp(id_file_path,pdf_output_dir,num_thread=2):
     pdf_output_dir = _clean_path(pdf_output_dir)
     pool = PoolMP(num_thread)
@@ -420,7 +445,9 @@ def get_materials_folder_mp(pdf_dir,output_dir,sec_header_good,sec_header_bad,nu
 
 """BEGIN SCIENCE-PARSE SERVER FUNCTIONS"""
 """*****************************"""
-
+#connects to the science-parse server
+#server is hosted locally on the machine
+#science-parse creates JSON files which contain the PDF contents seperated by section
 def _post_science_parse(s):
     a=s.split("+")
     print(a[0])
@@ -428,9 +455,10 @@ def _post_science_parse(s):
         with open(a[0], 'rb') as f:
             r = requests.post('http://localhost:8080/v1', files={a[0]: f})
             open(a[1]+a[0].split('/')[-1][0:-4]+'.json','w',encoding='utf-8').write(r.text)
+    #prints an error if the PDF cannot be parsed
     except Exception as e:
         print("ERROR "+str(e))
-
+#gets JSON file from science parse server and saves it to directory
 def get_pdf_json(pdf_dir,out_dir,num_thread=2):
     pdf_dir = _clean_path(pdf_dir)
     out_dir = _clean_path(out_dir)
@@ -439,7 +467,9 @@ def get_pdf_json(pdf_dir,out_dir,num_thread=2):
     for line in os.listdir(pdf_dir):
         pack.append(pdf_dir+line+"+"+out_dir)
     results = pool.map(_post_science_parse,pack)
-
+    
+#multiprocessing version of "get_pdf_json"
+#default number of threads = 2
 def get_pdf_json_mp(pdf_dir,out_dir,num_thread=2):
     pdf_dir = _clean_path(pdf_dir)
     out_dir = _clean_path(out_dir)
@@ -456,7 +486,7 @@ def get_pdf_json_mp(pdf_dir,out_dir,num_thread=2):
 
 """BEGIN JSON PARSING FUNCTIONS"""
 """****************************"""
-
+#
 def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path):
 	json_path = _clean_path(json_path)
 
@@ -600,6 +630,7 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 	#get the remaining entries in the table and write them to csv
 	pd.read_sql(sql='SELECT * FROM temp_table ORDER BY id,sec_num,split_num', con=conn).to_csv(csv_out_path, index=False,sep = ',',quoting=csv.QUOTE_NONNUMERIC) 
 
+
 def partition_jsons(json_dir,partition_dir,json_per_folder):
     files = [os.path.join(json_dir, f) for f in os.listdir(json_dir)]
     i = 0
@@ -722,7 +753,8 @@ def _any_rev(array,string):
         if i in string:
             return True
     return False
-
+#uses PDFResource Manager tool to convert the PDF files to text
+#not used
 def _convert_pdf_to_txt(path):
     rsrcmgr = PDFResourceManager()
     retstr = StringIO()
@@ -770,7 +802,8 @@ def get_empty_files(pdf_dir,out_path):
         if os.stat(str(pdf_dir)+"/"+f.decode('utf-8')).st_size == 0:
             out.write(f.decode('utf-8').split("/")[-1].split(".pdf")[0]+"\n")
     out.close()
-
+#sorts out the flies which do not have a DOI or PMCID
+#these files are unretrievable
 def sort_nonretrievable(csv_file_path, good_out_path, bad_out_path):
     good_pdf= open(good_out_path, 'w')
     bad_pdf = open(bad_out_path, 'w')
@@ -792,6 +825,8 @@ def _txt_diff(txt1,txt2,out_txt):
     t2 = open(txt2,'r').readlines()
     open(out_txt,'w').writelines(list(set(t1)-set(t2)))
 
+#computes the ratio of uppercase letters to all characters
+#used to sort the parsed JSON sections 
 def _upper_ratio(s):
     if len(s)==0:
         return 0
@@ -800,7 +835,8 @@ def _upper_ratio(s):
     if u+l==0:
         return 0
     return u/(u+l)
-
+#computes the ratio of numerical characters to characters in a section of parsed PDF
+#used to sort sections that are not needed
 def _digit_ratio(s):
     if len(s)==0:
         return 0
@@ -809,7 +845,7 @@ def _digit_ratio(s):
     if c+d==0:
         return 0
     return d/(c+d)
-
+#computes the ratio of special characters to characters in a section of parsed PDF
 def _special_ratio(s):
     if len(s)==0:
         return 0
