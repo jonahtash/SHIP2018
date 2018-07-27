@@ -13,10 +13,10 @@ SHIP 2018 contains utilities to batch assemble databases of scientific articles 
 
 ## Example Usage
 
-From start to finish here is how one can download and process articles from a given PubMed search.
+From start to finish here is how one can download and process articles from a given PubMed search. [Summary](#tldr "TL;DR") at the bottom.
 
 ###  Dependencies
-[Install Ruby](https://www.ruby-lang.org/en/downloads/), then run:
+[Install Ruby](https://www.ruby-lang.org/en/downloads/ "Download Ruby"), then run:
 ```c
 >python setup.py
 ```
@@ -59,7 +59,8 @@ get_pmcid_csv("torun/pubmed_result.csv","torun/ids_pmc.txt","torun/ids_pmed.txt"
 ```
 This will make two ids list txts. One txt will be formatted correctly to download PDFs from the PMC and we will use the other list to interface with the Ruby script.
 
-You are now going to want to run the PMC id list. **NOTE VERY IMPORTANT!!!!1!!** DO NOT,  use this next function without permission from NIH. It is a copyright violation to do so and your IP will be banned from the PMC website (but mainly its illegal). If you do have permission from NIH to batch download in this fashion run:
+You are now going to want to run the PMC id list. **NOTE: VERY IMPORTANT!!!!** DO NOT,  use this next function without permission from NIH. It is a copyright violation to do so and your IP will be banned from the PMC website (but mainly its illegal). The developers of SHIP 2018 assume no liability and are not responsible for any misuse or
+damage caused by this program. If you do have permission from NIH to batch download in this fashion run:
 ```python 
 get_error_mp("torun/ids_pmc.txt","pdf/","inacessable/")
 ```
@@ -73,7 +74,7 @@ run_id_ruby_mp("torun/ids_pmed.txt","inacessable/inacessable_pmed.txt")
 You will now have every article pdf from your original csv that SHIP 2018 is capable of retrieving.
 
 #### PDF Processing
-First run your PDFs through [Science-Parse](https://github.com/allenai/science-parse):
+First run your PDFs through [Science-Parse](https://github.com/allenai/science-parse "Science-Parse"):
 ```c
 >java -jar cli-assembly.jar -o json/ pdf/
 ```
@@ -82,10 +83,14 @@ Now extract the material sections from the PDFs into csv
 run_json_folder("json/","exclude.csv","chars.csv","data/bkup.csv","data.csv")
 ```
 That's all it takes! You now have a .csv file that contains the materials section of each PDF file for (*almost*) every article in a given PubMed search as well as a PDF file for every article retrieved.
+
+<div id=tldr>
+
 ### Summary
 ```python
 sort_inacessable_csv("pubmed_result.csv", "torun/pubmed_result.csv", "inacessable/pubmed_inacessable.csv")
 
+# Only run this program if you have permission from NIH
 get_pmcid_csv("torun/pubmed_result.csv","torun/ids_pmc.txt","torun/ids_pmed.txt")
 
 # Generate JSONs in ./json/ using Science-Parse
@@ -102,5 +107,25 @@ run_json_folder("json/","exclude.csv","chars.csv","data/bkup.csv","data.csv")
 	 - The PubMeb entry has neither a DOI nor a PMC id
 	 - PubMed or PMC gives an error 404 or 403 file removed error for a given id
 	 - The journal site requires a site subscription that you do not have
-	 - The article is on a journal site that is not supported- see [Adding a Journal Site](#)
+	 - The article is on a journal site that is not supported- see [Adding a Journal Site](#adding "Adding a Journal Site")
+ - **Partioning JSONs** The dataset of article PDFs that you assemble using SHIP 2018 is liable to be VERY large. If this is the case you may want to first partition your Science-Parse json folder and then generate a csv for each partition folder:
+```python
+ partition_jsons("json/","jsonpart/", 500)
+
+run_partition_folders("jsonpart/","data/","exclude.csv","chars.csv")
+```
+
+<div id=adding>
+
+## Adding a Journal Site
+
+SHIP 2018 uses a modified version of [Pubmed-Batch-Download](https://github.com/billgreenwald/Pubmed-Batch-Download/tree/master/ruby_version "Pubmed-Batch-Download Ruby"). This program follows the DOI link for an article and tries to download the PDF for that article by clicking on the download link based on the format of various popular journal sites, Springer Link, Science Direct, etc. All journal sites currently supported are listed in `pdfetch.rb`. You can increase your article yield by adding support for currently unsupported journal sites. A handy utility for doing this is available in SHIP 2018:
+```python
+ sort_url_mp("torun/ids_pmed.txt","torun/journal_domains.csv")
+
+count_domain("torun/journal_domains.csv","torun/journal_domains_count.csv")
+```
+This will create two .csv files. One, `journal_domains.csv` will contain the journal site domain for each PubMed id in `ids_pmed.txt`. `journal_domains_count.csv` will list each domain alongside how articles are located under that domain. This way you can determine which unsupported journal sites will give you the highest yield increase. Once you have determined which sites you plan to add support for you will need to add finders to `pdfetch.rb`. Model your new finders off of the ones already in the script. Additionally since SHIP 2018 has been developed, Pubmed-Batch-Download has been ported to Python so it might be best to write all new finders for that new program.
+
+
 >Written by Jonah Tash and Pavan Bhat
