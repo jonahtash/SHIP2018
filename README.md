@@ -15,6 +15,9 @@ SHIP 2018 contains utilities to batch assemble databases of scientific articles 
 
 From start to finish here is how one can download and process articles from a given PubMed search.
 ### Get a CSV from PubMed
-![](https://raw.githubusercontent.com/jonahtash/SHIP2018/master/img/pmed.png =786x396"Download CSV")
+Search for something on the PubMed website, in this example we search for the phrase "engineering biology"
+
+<img src="https://raw.githubusercontent.com/jonahtash/SHIP2018/master/img/pmed.png" width="786">
+
 After searching for a query on the PubMed website select "Send To" > "File" > Format: CSV and press "Create File"
 >Written by Jonah Tash and Pavan Bhat
