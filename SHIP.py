@@ -714,7 +714,6 @@ def csv_add_pcmid(csv_file_path,pmed_id_path,output_path):
                re = csv.reader(csvf, delimiter=',')
                for row in re:
                    if(row[9] in i):
-                       print("good")
                        out.write(row[7].split("PMCID:")[1]+"+"+row[9]+"\n")
                        break
     out.close()
