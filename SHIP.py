@@ -322,10 +322,10 @@ def get_from_pmcid_mp(id_file_path,pdf_output_dir,kickback_path,num_thread=10):
     results = pool.map(_unpack,pack)
     pool.close()
 # trys to download from URLs that have previously failed
-def _download_pdf_errors(download_url,pmed_id,pdf_output_dir):
-    e404 = open("error_404.txt",'a')
-    e403_ban = open("error_403_ipBan.txt",'a')
-    e403_rem = open("error_403_rem.txt",'a')
+def _download_pdf_errors(download_url,pmed_id,pdf_output_dir,kickback_dir):
+    e404 = open(kickback_dir+"error_404.txt",'a')
+    e403_ban = open(kickback_dir+"error_403_ipBan.txt",'a')
+    e403_rem = open(kickback_dir+"error_403_rem.txt",'a')
     try:
         #assemble http request. PMC is sus if you don't have User-Agent header
         headers = {}
@@ -357,26 +357,27 @@ def _unpack_error(s):
     a = s.split("+")
     print(a[0]+" "+a[1].strip())
     _download_pdf_errors("https://www.ncbi.nlm.nih.gov/pmc/articles/"+a[0]+"/pdf/",
-                        a[1].strip(),a[2])
+                        a[1].strip(),a[2],a[3])
 #regular threaded function
 #deafult num threads is 2
 #function to name PDFs
-def get_error(id_file_path,pdf_output_dir,num_thread=2):
+def get_error(id_file_path,pdf_output_dir,kickback_dir,num_thread=2):
     pdf_output_dir = _clean_path(pdf_output_dir)
     pool = Pool(num_thread)
     pack = []
     for line in open(id_file_path,'r'):
-        pack.append(line+"+"+pdf_output_dir)
+        pack.append(line+"+"+pdf_output_dir"+"+kickback_dir)
     results = pool.map(_unpack_error,pack)
 
 #multiprocessing version of get_error
 #default number of threads is 2
-def get_error_mp(id_file_path,pdf_output_dir,num_thread=2):
+def get_error_mp(id_file_path,pdf_output_dir,kickback_dir,num_thread=2):
     pdf_output_dir = _clean_path(pdf_output_dir)
+    kickback_dir = _clean_path(kickback_dir)
     pool = PoolMP(num_thread)
     pack = []
     for line in open(id_file_path,'r'):
-        pack.append(line+"+"+pdf_output_dir)
+        pack.append(line+"+"+pdf_output_dir+"+"+kickback_dir)
     results = pool.map(_unpack_error,pack)
     pool.close()
     
@@ -725,7 +726,17 @@ def count_heads(csv_file_path):
             seen.append(row[0])
     return len(seen)
 
-
+def sort_inacessable_csv(csv_file_path, good_out_path, bad_out_path):
+    good_pdf= csv.writer(open(good_out_path, 'w'),lineterminator="\n")
+    bad_pdf = csv.writer(open(bad_out_path, 'w'),lineterminator="\n")
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        readCSV = csv.reader(csvf, delimiter=',')
+        for row in readCSV:
+            if "doi:" not in row[3] and "PMCID" not in row[7]:
+                bad_pdf.writerow(row)
+            else:
+                good_pdf.writerow(row)
+        
 """*************************"""
 """END CSV PARSING FUNCTIONS"""
 
