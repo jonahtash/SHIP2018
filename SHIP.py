@@ -736,6 +736,33 @@ def sort_inacessable_csv(csv_file_path, good_out_path, bad_out_path):
                 bad_pdf.writerow(row)
             else:
                 good_pdf.writerow(row)
+
+                
+# Removes html content from csv file 
+def csv_rem_html(csv_in,csv_out):
+    csvf = csv.reader(open(csv_in,'r'))
+    csvw = csv.writer(open(csv_out,'w',encoding='utf-8'),lineterminator='\n')
+    for row in csvf:
+        for i in range(len(row)):
+            row[i] = re.sub(r'<\/?(.*?)>',"",row[i])
+            row[i] = re.sub(r'\[\[{(.*?)}\]\]'," ",row[i])
+            row[i] = row[i].replace("  "," ")
+        csvw.writerow(row)
+
+        
+# Removes html content from xlsx file
+def xls_rem_html(xls_in,csv_out):
+    xlsf = pd.read_excel(xls_in,header=None)
+    xlsf = xlsf.astype(str)
+    csvw = csv.writer(open(csv_out,'w',encoding='utf-8'),lineterminator='\n')
+    for row in xlsf.itertuples():
+        br = []
+        for i in range(1,len(row),1):
+            bs = re.sub(r'<\/?(.*?)>',"",str(row[i]))
+            bs = re.sub(r'\[\[{(.*?)}\]\]'," ",bs)
+            bs = bs.replace("  "," ")
+            br.append(bs)
+        csvw.writerow(br)
         
 """*************************"""
 """END CSV PARSING FUNCTIONS"""
@@ -863,6 +890,8 @@ def _digit_ratio(s):
     if c+d==0:
         return 0
     return d/(c+d)
+
+
 #computes the ratio of special characters to characters in a section of parsed PDF
 def _special_ratio(s):
     if len(s)==0:
@@ -873,16 +902,9 @@ def _special_ratio(s):
         return 0
     return s/(c+s)
 
-def csv_rem_html(csv_in,csv_out):
-    csvf = csv.reader(open(csv_in,'r'))
-    csvw = csv.writer(open(csv_out,'w'),lineterminator='\n')
-    for row in csvf:
-        for i in range(len(row)):
-            row[i] = re.sub(r'<\/?(.*?)>',"",row[i])
-        csvw.writerow(row)
-
 """*********************"""
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
     freeze_support()
+    #xls_rem_html("C:\\Users\\jnt11\\Documents\\Copy_of_staff_profiles_from_john.xlsx","C:\\Users\\jnt11\\Downloads\\staff_profiles_no_html.csv",)
