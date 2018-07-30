@@ -886,4 +886,3 @@ def csv_rem_html(csv_in,csv_out):
 
 if __name__ == '__main__':
     freeze_support()
-    csv_rem_html("C:\\Users\\jnt11\\Downloads\\in.csv","C:\\Users\\jnt11\\Downloads\\inChnaged.csv")
