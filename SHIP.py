@@ -366,7 +366,7 @@ def get_error(id_file_path,pdf_output_dir,kickback_dir,num_thread=2):
     pool = Pool(num_thread)
     pack = []
     for line in open(id_file_path,'r'):
-        pack.append(line+"+"+pdf_output_dir"+"+kickback_dir)
+        pack.append(line+"+"+pdf_output_dir+"+"+kickback_dir)
     results = pool.map(_unpack_error,pack)
 
 #multiprocessing version of get_error
@@ -873,8 +873,17 @@ def _special_ratio(s):
         return 0
     return s/(c+s)
 
+def csv_rem_html(csv_in,csv_out):
+    csvf = csv.reader(open(csv_in,'r'))
+    csvw = csv.writer(open(csv_out,'w'),lineterminator='\n')
+    for row in csvf:
+        for i in range(len(row)):
+            row[i] = re.sub(r'<\/?(.*?)>',"",row[i])
+        csvw.writerow(row)
+
 """*********************"""
 """END UTILITY FUNCTIONS"""
 
 if __name__ == '__main__':
     freeze_support()
+    csv_rem_html("C:\\Users\\jnt11\\Downloads\\in.csv","C:\\Users\\jnt11\\Downloads\\inChnaged.csv")
