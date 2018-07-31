@@ -758,11 +758,22 @@ def xls_rem_html(xls_in,csv_out):
     csvw = csv.writer(open(csv_out,'w',encoding='utf-8'),lineterminator='\n')
     for row in xlsf.itertuples():
         br = []
+        diff = 0
         for i in range(1,len(row),1):
-            bs = re.sub(r'<\/?(.*?)>',"",str(row[i]))
+            orig=str(row[i])
+            bs = re.sub(r'<\/?(.*?)>'," ",str(row[i]),flags=re.DOTALL)
             bs = re.sub(r'\[\[{(.*?)}\]\]'," ",bs)
-            bs = bs.replace("  "," ")
-            br.append(bs)
+            bs += " "
+            bs  = re.sub(r'http(.*?)(\s)'," ",bs)
+            bs  = re.sub(r'&(.*?)(\s|;)'," ",bs)
+            bs = re.sub(r'\t* *\n',"\n",bs)
+            bs  = re.sub(r'(\n{2,})',"\n",bs)
+            bs  = re.sub(r'(\r{2,})',"\r",bs)
+            bs  = re.sub(r'( {2,})'," ",bs)
+            br.append(bs.strip())
+            if(i==1):
+                diff = (len(orig)-len(bs))
+        br.append(diff)
         csvw.writerow(br)
         
 """*************************"""
