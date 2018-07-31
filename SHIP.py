@@ -157,6 +157,7 @@ def _sort_url_process(line):
         cj = CookieJar()
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         resp = opener.open(req)
+        # url regex: http(s?):\/\/(www\.)?(.*?)\.(com|org|net|gov)
         #use urllib urlparse to extract domain name from url that the doi link redirected to
         found = urllib.parse.urlparse(resp.geturl()).netloc
         #return the the domain name of the doi link of the article and the PubMed id of that article delimeted by ||
