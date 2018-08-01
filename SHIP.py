@@ -482,8 +482,11 @@ def get_pdf_json_mp(pdf_dir,out_dir,num_thread=2):
     out_dir = _clean_path(out_dir)
     pool = PoolMP(num_thread)
     pack = []
-    for line in os.listdir(pdf_dir):
-        pack.append(pdf_dir+line+"+"+out_dir)
+    try:
+        for line in os.listdir(pdf_dir):
+            pack.append(pdf_dir+line+"+"+out_dir)
+    except Exception as e:
+        print(str(e))
     results = pool.map(_post_science_parse,pack)
     pool.close()
 
@@ -741,21 +744,31 @@ def sort_inacessable_csv(csv_file_path, good_out_path, bad_out_path):
                 
 # Removes html content from csv file 
 def csv_rem_html(csv_in,csv_out):
-    csvf = csv.reader(open(csv_in,'r'))
-    csvw = csv.writer(open(csv_out,'w',encoding='utf-8'),lineterminator='\n')
+    csvf = csv.reader(open(csv_in,'r',encoding='utf-8'))
+    csvw = csv.writer(open(csv_out,'w',encoding='utf-8-sig'),lineterminator='\n')
     for row in csvf:
+        br = []
+        diff = 0
         for i in range(len(row)):
-            row[i] = re.sub(r'<\/?(.*?)>',"",row[i])
-            row[i] = re.sub(r'\[\[{(.*?)}\]\]'," ",row[i])
-            row[i] = row[i].replace("  "," ")
-        csvw.writerow(row)
+            orig=row[i]
+            bs = re.sub(r'<\/?(.*?)>'," ",row[i],flags=re.DOTALL)
+            bs = re.sub(r'\[\[{(.*?)}\]\]'," ",bs)
+            bs += " "
+            regs = [[r'http(.*?)(\s)', ' '],[r'&(.*?)(\s|;)', ' '],[r'\t* *\n','\n'],[r'(\n{2,})','\n'],[r'(\r{2,})','\r'],[r'( {2,})',' ']]
+            for reg in regs:
+                bs = re.sub(reg[0],reg[1],bs)
+            br.append(bs.strip())
+            if(i==1):
+                diff = (len(orig)-len(bs))
+        br.append(diff)
+        csvw.writerow(br)
 
         
 # Removes html content from xlsx file
 def xls_rem_html(xls_in,csv_out):
-    xlsf = pd.read_excel(xls_in,header=None)
+    xlsf = pd.read_excel(xls_in,encoding='utf-8',header=None)
     xlsf = xlsf.astype(str)
-    csvw = csv.writer(open(csv_out,'w',encoding='utf-8'),lineterminator='\n')
+    csvw = csv.writer(open(csv_out,'w',encoding='utf-8-sig'),lineterminator='\n')
     for row in xlsf.itertuples():
         br = []
         diff = 0
@@ -764,12 +777,9 @@ def xls_rem_html(xls_in,csv_out):
             bs = re.sub(r'<\/?(.*?)>'," ",str(row[i]),flags=re.DOTALL)
             bs = re.sub(r'\[\[{(.*?)}\]\]'," ",bs)
             bs += " "
-            bs  = re.sub(r'http(.*?)(\s)'," ",bs)
-            bs  = re.sub(r'&(.*?)(\s|;)'," ",bs)
-            bs = re.sub(r'\t* *\n',"\n",bs)
-            bs  = re.sub(r'(\n{2,})',"\n",bs)
-            bs  = re.sub(r'(\r{2,})',"\r",bs)
-            bs  = re.sub(r'( {2,})'," ",bs)
+            regs = [[r'http(.*?)(\s)', ' '],[r'&(.*?)(\s|;)', ' '],[r'\t* *\n','\n'],[r'(\n{2,})','\n'],[r'(\r{2,})','\r'],[r'( {2,})',' ']]
+            for reg in regs:
+                bs = re.sub(reg[0],reg[1],bs)
             br.append(bs.strip())
             if(i==1):
                 diff = (len(orig)-len(bs))
