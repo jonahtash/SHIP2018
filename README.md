@@ -110,7 +110,7 @@ run_json_folder("json/","exclude.csv","chars.csv","data/bkup.csv","data.csv")
 	 - The article is on a journal site that is not supported- see [Adding a Journal Site](#adding "Adding a Journal Site")
  - **Partioning JSONs** The dataset of article PDFs that you assemble using SHIP 2018 is liable to be VERY large. If this is the case you may want to first partition your Science-Parse json folder and then generate a csv for each partition folder:
 ```python
- partition_jsons("json/","jsonpart/", 500)
+partition_jsons("json/","jsonpart/", 500)
 
 run_partition_folders("jsonpart/","data/","exclude.csv","chars.csv")
 ```
@@ -121,7 +121,7 @@ run_partition_folders("jsonpart/","data/","exclude.csv","chars.csv")
 
 SHIP 2018 uses a modified version of [Pubmed-Batch-Download](https://github.com/billgreenwald/Pubmed-Batch-Download/tree/master/ruby_version "Pubmed-Batch-Download Ruby"). This program follows the DOI link for an article and tries to download the PDF for that article by clicking on the download link based on the format of various popular journal sites, Springer Link, Science Direct, etc. All journal sites currently supported are listed in `pdfetch.rb`. You can increase your article yield by adding support for currently unsupported journal sites. A handy utility for doing this is available in SHIP 2018:
 ```python
- sort_url_mp("torun/ids_pmed.txt","torun/journal_domains.csv")
+sort_url_mp("torun/ids_pmed.txt","torun/journal_domains.csv")
 
 count_domain("torun/journal_domains.csv","torun/journal_domains_count.csv")
 ```

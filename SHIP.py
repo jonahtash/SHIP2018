@@ -276,9 +276,11 @@ def _process_get_abstracts(line):
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
     resp = opener.open(req)
     root = ET.fromstring(resp.read())
-    abst = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('Abstract').find('AbstractText').text.strip()
+    abst = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('Abstract').find('AbstractText').text if root.find('PubmedArticle').find('MedlineCitation').find('Article').find('Abstract') else ""
     title = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('ArticleTitle').text.strip()
     journal_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id="+line+"&retmode=ref&cmd=prlinks"
+    if not abst:
+        abst = ""
     return line+"**"+title+"^&^&"+journal_url+"$%$%"+abst
           
 def get_abstracts_mp(txt_ids_in,csv_abstracts_out,num_threads=10):
@@ -291,7 +293,7 @@ def get_abstracts_mp(txt_ids_in,csv_abstracts_out,num_threads=10):
         results = pool.map(_process_get_abstracts, source_file)
 
     #write the list of failed ids to file
-    csvf =csv.writer(open(csv_abstracts_out,'w',encoding='utf-8'),lineterminator="\n")
+    csvf =csv.writer(open(csv_abstracts_out,'w',encoding='utf-8-sig'),lineterminator="\n")
     csvf.writerow(["PubMed Id","Title","Journal URL","Abstract"])
     for i in results:
         id_index = i.index("**")
@@ -994,4 +996,4 @@ def _special_ratio(s):
 if __name__ == '__main__':
     freeze_support()
     #xls_rem_html("C:\\Users\\jnt11\\Documents\\Copy_of_staff_profiles_from_john.xlsx","C:\\Users\\jnt11\\Downloads\\staff_profiles_no_html.csv",)
-    get_abstracts_mp("C:\\Users\\jnt11\\Documents\\GitHub\\SHIPGUI\\nature_ids.txt",'nature_abstract.csv',num_threads=15)
+    get_abstracts_mp("C:\\Users\\jnt11\\Documents\\GitHub\\SHIPGUI\\nature_ids.txt",'nature_abstract2.csv',num_threads=15)
