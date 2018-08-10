@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>SHIP &#8212; SHIP 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="../_static/js/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
+    <script type="text/javascript" src="../_static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          SHIP</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"></ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm"></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-12 content">
+      
+  <h1>Source code for SHIP</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span> <span class="k">as</span> <span class="n">PoolMP</span>
+<span class="kn">from</span> <span class="nn">multiprocessing.dummy</span> <span class="k">import</span> <span class="n">Pool</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">freeze_support</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">urllib.request</span>
+<span class="sd">&quot;&quot;&quot;from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter</span>
+<span class="sd">from pdfminer.converter import TextConverter</span>
+<span class="sd">from pdfminer.layout import LAParams</span>
+<span class="sd">from pdfminer.pdfpage import PDFPage&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="k">import</span> <span class="n">StringIO</span>
+<span class="kn">import</span> <span class="nn">unicodedata</span>
+<span class="kn">import</span> <span class="nn">ctypes</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">sqlite3</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">http.cookiejar</span> <span class="k">import</span> <span class="n">CookieJar</span>
+<span class="kn">from</span> <span class="nn">bs4</span> <span class="k">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN RUBY pudmebid2pdf INTERACTION FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;*********************************************&quot;&quot;&quot;</span>
+
+<span class="c1">#func to process id in ruby script</span>
+<div class="viewcode-block" id="_process_line"><a class="viewcode-back" href="../index.html#SHIP._process_line">[docs]</a><span class="k">def</span> <span class="nf">_process_line</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="c1">#output PubMed id of document being run through ruby script</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="c1">#pass id to ruby script and save output in buffer</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="s2">&quot;ruby pubmedid2pdf.rb &quot;</span><span class="o">+</span><span class="n">line</span><span class="p">,</span><span class="n">shell</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                         <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span><span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    <span class="c1">#the ruby script uses alot of console warnings that mainly come to stderr</span>
+    <span class="c1">#if the dl failed return the id to be added to list of failed ids</span>
+    <span class="k">if</span> <span class="s2">&quot;failed&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">read</span><span class="p">()):</span>
+        <span class="k">return</span> <span class="n">line</span>
+    <span class="c1">#if the dl is successful return no id (empty string)</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
+
+<span class="c1">#run ruby script on list of ids at file_path and output failed ids</span>
+<span class="c1">#to kickback_loc. Optional num_threads number of threads to run- default 10</span>
+<span class="c1">#recommended to run this function over multiprocessing</span>
+<div class="viewcode-block" id="run_id_ruby"><a class="viewcode-back" href="../index.html#SHIP.run_id_ruby">[docs]</a><span class="k">def</span> <span class="nf">run_id_ruby</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span><span class="n">kickback_path</span><span class="p">,</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="c1">#record start time to calculate total runtime later</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+
+    <span class="c1">#init pool of workers from specified number</span>
+    <span class="c1">#this is how many downloads will run in parallel</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+
+    <span class="c1">#use Pool.map to have the worker pool take ids in chunks from txt</span>
+    <span class="c1">#and run them though ruby script using the _process_line function</span>
+    <span class="c1">#results will be failed with the ids that failed to dl</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">source_file</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_process_line</span><span class="p">,</span> <span class="n">source_file</span><span class="p">)</span>
+
+    <span class="c1">#write the list of failed ids to file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">kickback_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">-</span><span class="n">start</span></div>
+
+<span class="c1">#run ruby script on list of ids at file_path and output failed ids</span>
+<span class="c1">#to kickback_loc. Optional num_threads number of threads to run- default 10</span>
+<span class="c1">#multiprocessing version uses processes which opens multiple windows, not neccesary for ruby function</span>
+<div class="viewcode-block" id="run_id_ruby_mp"><a class="viewcode-back" href="../index.html#SHIP.run_id_ruby_mp">[docs]</a><span class="k">def</span> <span class="nf">run_id_ruby_mp</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span><span class="n">kickback_path</span><span class="p">,</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="c1">#record start time to calculate total runtime later</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+
+    <span class="c1">#init pool of workers from specified number</span>
+    <span class="c1">#this is how many downloads will run in parallel</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">PoolMP</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+
+    <span class="c1">#use Pool.map to have the worker pool take ids in chunks from txt</span>
+    <span class="c1">#and run them though ruby script using the _process_line function</span>
+    <span class="c1">#results will be failed with the ids that failed to download</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">source_file</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_process_line</span><span class="p">,</span> <span class="n">source_file</span><span class="p">)</span>
+
+    <span class="c1">#write the list of failed ids to file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">kickback_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">-</span><span class="n">start</span></div>
+
+
+<span class="sd">&quot;&quot;&quot;********************************************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END RUBY &#39;pudmebid2pdf&#39; INTERACTION FUNCTIONS&quot;&quot;&quot;</span>
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN URL SORTING FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;***************************&quot;&quot;&quot;</span>
+
+<span class="c1">#func to process ids from inacessable db liebert</span>
+<div class="viewcode-block" id="_process_liebert"><a class="viewcode-back" href="../index.html#SHIP._process_liebert">[docs]</a><span class="k">def</span> <span class="nf">_process_liebert</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1">#build request</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">#internet-explorer user-agent string</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17&quot;</span>
+        <span class="c1">#use nih eutil to get link that redirects to the doi url for each article</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&amp;id=&quot;</span><span class="o">+</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">+</span><span class="s2">&quot;&amp;retmode=ref&amp;cmd=prlinks&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">headers</span><span class="p">)</span>
+        <span class="c1">#site was refusing robot connection so cookie jar is used to bypass</span>
+        <span class="n">cj</span> <span class="o">=</span> <span class="n">CookieJar</span><span class="p">()</span>
+        <span class="n">opener</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">build_opener</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">HTTPCookieProcessor</span><span class="p">(</span><span class="n">cj</span><span class="p">))</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">opener</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+
+        <span class="c1">#check to see if the doi url redirected to liebert db site</span>
+        <span class="k">if</span> <span class="s2">&quot;liebertpub&quot;</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">geturl</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">line</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+
+    <span class="c1">#this return is called if an error occurs while attempting to get the doi url</span>
+    <span class="c1">#assume its not liebert so it can be checked again</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
+
+<span class="c1">#takes input list of PubMed ids and splits based on which ids&#39; doi link redirects to the journal site &quot;liebertpub&quot;</span>
+<span class="c1">#articles on the site are paywalled and therefore ingnored during pdf collection</span>
+<span class="c1">#id_txt path to txt with list of ids to b split</span>
+<span class="c1">#out_txt output path of article ids that are located on liebert site</span>
+<span class="c1">#not_out_txt output path of article ids that are not located on liebert site</span>
+<div class="viewcode-block" id="_get_liebert"><a class="viewcode-back" href="../index.html#SHIP._get_liebert">[docs]</a><span class="k">def</span> <span class="nf">_get_liebert</span><span class="p">(</span><span class="n">id_txt</span><span class="p">,</span><span class="n">out_txt</span><span class="p">,</span> <span class="n">not_out_txt</span><span class="p">,</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+
+    <span class="c1">#same Pool.map to map liebert process function to an input list of PubMed ids</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_txt</span><span class="p">)</span> <span class="k">as</span> <span class="n">source_file</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_process_liebert</span><span class="p">,</span> <span class="n">source_file</span><span class="p">)</span>
+    <span class="c1">#write the list of failed ids to file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_txt</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">_txt_diff</span><span class="p">(</span><span class="n">id_txt</span><span class="p">,</span><span class="n">out_txt</span><span class="p">,</span><span class="n">not_out_txt</span><span class="p">)</span></div>
+
+<span class="c1">#func to process urls for url domain sorting function</span>
+<span class="c1">#line is PubMed id</span>
+<div class="viewcode-block" id="_sort_url_process"><a class="viewcode-back" href="../index.html#SHIP._sort_url_process">[docs]</a><span class="k">def</span> <span class="nf">_sort_url_process</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1">#build request</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">#internet-explorer user-agent</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17&quot;</span>
+        <span class="c1">#use nih eutil to get link that redirects to the doi url for each article</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&amp;id=&quot;</span><span class="o">+</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">+</span><span class="s2">&quot;&amp;retmode=ref&amp;cmd=prlinks&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">headers</span><span class="p">)</span>
+        <span class="c1">#use cookie jar to bypass robot blockers</span>
+        <span class="n">cj</span> <span class="o">=</span> <span class="n">CookieJar</span><span class="p">()</span>
+        <span class="n">opener</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">build_opener</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">HTTPCookieProcessor</span><span class="p">(</span><span class="n">cj</span><span class="p">))</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">opener</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="c1"># url regex: http(s?):\/\/(www\.)?(.*?)\.(com|org|net|gov)</span>
+        <span class="c1">#use urllib urlparse to extract domain name from url that the doi link redirected to</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">geturl</span><span class="p">())</span><span class="o">.</span><span class="n">netloc</span>
+        <span class="c1">#return the the domain name of the doi link of the article and the PubMed id of that article delimeted by ||</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">found</span><span class="o">+</span><span class="s2">&quot;||&quot;</span><span class="o">+</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="c1">#if an error occurs return the domain name as &quot;error:*the error mesage*&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;error:&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;||&quot;</span><span class="o">+</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="sort_url"><a class="viewcode-back" href="../index.html#SHIP.sort_url">[docs]</a><span class="k">def</span> <span class="nf">sort_url</span><span class="p">(</span><span class="n">id_txt</span><span class="p">,</span><span class="n">out_csv</span><span class="p">,</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+
+    <span class="c1">#use Pool.map to have the worker pool take ids in chunks from txt</span>
+    <span class="c1">#and run them though ruby script using the process_line function</span>
+    <span class="c1">#results will be failed with the ids that failed to dl</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_txt</span><span class="p">)</span> <span class="k">as</span> <span class="n">source_file</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_sort_url_process</span><span class="p">,</span> <span class="n">source_file</span><span class="p">)</span>
+
+    <span class="c1">#write the list of failed ids to file</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">out_csv</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">),</span><span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;||&quot;</span><span class="p">))</span></div>
+        
+<span class="c1">#multiprocessing version of &quot;sort_url&quot;</span>
+<span class="c1">#faster than the threaded version and opens several different windows</span>
+<div class="viewcode-block" id="sort_url_mp"><a class="viewcode-back" href="../index.html#SHIP.sort_url_mp">[docs]</a><span class="k">def</span> <span class="nf">sort_url_mp</span><span class="p">(</span><span class="n">id_txt</span><span class="p">,</span><span class="n">out_csv</span><span class="p">,</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">PoolMP</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+
+    <span class="c1">#use Pool.map to have the worker pool take ids in chunks from txt</span>
+    <span class="c1">#and run them though ruby script using the process_line function</span>
+    <span class="c1">#results will be failed with the ids that failed to dl</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_txt</span><span class="p">)</span> <span class="k">as</span> <span class="n">source_file</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_sort_url_process</span><span class="p">,</span> <span class="n">source_file</span><span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="c1">#write the list of failed ids to file</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">out_csv</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">),</span><span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;||&quot;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="count_domain"><a class="viewcode-back" href="../index.html#SHIP.count_domain">[docs]</a><span class="k">def</span> <span class="nf">count_domain</span><span class="p">(</span><span class="n">in_csv</span><span class="p">,</span><span class="n">out_csv</span><span class="p">):</span>
+    <span class="n">domains</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">in_csv</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">domains</span><span class="p">:</span>
+            <span class="n">domains</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">domains</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">domains</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">out_csv</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">),</span><span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">domains</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">k</span><span class="p">,</span><span class="n">domains</span><span class="p">[</span><span class="n">k</span><span class="p">]])</span></div>
+        
+<span class="c1">#sorts out the paywalled articles that are inaccesible on the Oxford Journal Website</span>
+<div class="viewcode-block" id="_get_ox_paywall"><a class="viewcode-back" href="../index.html#SHIP._get_ox_paywall">[docs]</a><span class="k">def</span> <span class="nf">_get_ox_paywall</span><span class="p">(</span><span class="n">id_txt</span><span class="p">,</span><span class="n">out_txt</span><span class="p">,</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+
+    <span class="c1">#use Pool.map to have the worker pool take ids in chunks from txt</span>
+    <span class="c1">#and run them though ruby script using the process_line function</span>
+    <span class="c1">#results will be failed with the ids that failed to dl</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_txt</span><span class="p">)</span> <span class="k">as</span> <span class="n">source_file</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_get_ox_paywall_process</span><span class="p">,</span> <span class="n">source_file</span><span class="p">)</span>
+
+    <span class="c1">#write the list of failed ids to file</span>
+    <span class="n">f</span> <span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="n">out_txt</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">i</span><span class="p">)</span></div>
+
+    
+<span class="c1">#writes list of failed (paywalled) IDs from Oxford Journal Website</span>
+<div class="viewcode-block" id="_get_ox_txt"><a class="viewcode-back" href="../index.html#SHIP._get_ox_txt">[docs]</a><span class="k">def</span> <span class="nf">_get_ox_txt</span><span class="p">(</span><span class="n">in_csv</span><span class="p">,</span><span class="n">out_txt</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_txt</span><span class="p">,</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">in_csv</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;academic.oup.com&quot;</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+    
+<span class="c1">#Attempts to download the articles from the Oxford Journal Website </span>
+<div class="viewcode-block" id="_get_ox_paywall_process"><a class="viewcode-back" href="../index.html#SHIP._get_ox_paywall_process">[docs]</a><span class="k">def</span> <span class="nf">_get_ox_paywall_process</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="c1">#build request</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1">#internet-explorer user-agent</span>
+    <span class="n">headers</span><span class="p">[</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17&quot;</span>
+    <span class="c1">#use nih eutil to get link that redirects to the doi url for each article</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&amp;id=&quot;</span><span class="o">+</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">+</span><span class="s2">&quot;&amp;retmode=ref&amp;cmd=prlinks&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">headers</span><span class="p">)</span>
+    <span class="c1">#use cookie jar to bypass robot blockers</span>
+    <span class="n">cj</span> <span class="o">=</span> <span class="n">CookieJar</span><span class="p">()</span>
+    <span class="n">opener</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">build_opener</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">HTTPCookieProcessor</span><span class="p">(</span><span class="n">cj</span><span class="p">))</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">opener</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+    <span class="c1">#Uses the tool &#39;Beautiful Soup&#39; to parse the HTML of the website</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="s1">&#39;html.parser&#39;</span><span class="p">)</span>
+    <span class="c1">#checks to see if the document is inaccesible</span>
+    <span class="k">if</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;PermissionsLink&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">line</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
+
+<span class="sd">&quot;&quot;&quot;*************************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END URL SORTING FUNCTIONS&quot;&quot;&quot;</span>
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN PMC DOWLOAD FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;***************************&quot;&quot;&quot;</span>
+
+<span class="c1">#Download pdf at download_url from PMC website.</span>
+<span class="c1">#Save pdf to folder at pdf_output_dir and name pdf pmed_id.</span>
+<span class="c1">#Output failed downloads to kickback_path txt.</span>
+<div class="viewcode-block" id="_download_pdf_fromid"><a class="viewcode-back" href="../index.html#SHIP._download_pdf_fromid">[docs]</a><span class="k">def</span> <span class="nf">_download_pdf_fromid</span><span class="p">(</span><span class="n">download_url</span><span class="p">,</span><span class="n">pmed_id</span><span class="p">,</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_path</span><span class="p">):</span>
+    <span class="n">kick</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">kickback_path</span><span class="p">,</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1">#assemble http request. PMC is sus if you don&#39;t have User-Agent header</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">#set agent to IE</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17&quot;</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">download_url</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">headers</span><span class="p">)</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;./&quot;</span><span class="o">+</span><span class="n">pdf_output_dir</span><span class="o">+</span><span class="n">pmed_id</span><span class="o">+</span><span class="s2">&quot;.pdf&quot;</span><span class="p">,</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="n">kick</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">download_url</span><span class="p">[</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;PMC&quot;</span><span class="p">):</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;/pdf/&quot;</span><span class="p">)]</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pmed_id</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">kick</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1">#PREREQ: id file in format &quot;PMCID+PUBMEDID&quot;.</span>
+<span class="c1">#Download pdfs of entries in txt at id_file_path.</span>
+<span class="c1">#Downloads pdfs to pdf_output_dir.</span>
+<span class="c1">#Output failed downloads to kickback_path.</span>
+<div class="viewcode-block" id="_get_from_pmcid"><a class="viewcode-back" href="../index.html#SHIP._get_from_pmcid">[docs]</a><span class="k">def</span> <span class="nf">_get_from_pmcid</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_path</span><span class="p">):</span>
+    <span class="n">pdf_output_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">pdf_output_dir</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+            <span class="n">_download_pdf_fromid</span><span class="p">(</span><span class="s2">&quot;https://www.ncbi.nlm.nih.gov/pmc/articles/&quot;</span><span class="o">+</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;/pdf/&quot;</span><span class="p">,</span>
+                          <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_path</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div>
+
+<span class="c1">#helper func for threaded dl</span>
+<span class="k">def</span> <span class="nf">_unpack</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="n">_download_pdf_fromid</span><span class="p">(</span><span class="s2">&quot;https://www.ncbi.nlm.nih.gov/pmc/articles/&quot;</span><span class="o">+</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;/pdf/&quot;</span><span class="p">,</span>
+                        <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span><span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">a</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+<span class="c1">#Get_from_pmcid threaded version.</span>
+<span class="c1">#Default 10 threads.</span>
+<div class="viewcode-block" id="get_from_pmcid"><a class="viewcode-back" href="../index.html#SHIP.get_from_pmcid">[docs]</a><span class="k">def</span> <span class="nf">get_from_pmcid</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_path</span><span class="p">,</span><span class="n">num_thread</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">pdf_output_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">pdf_output_dir</span><span class="p">)</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">num_thread</span><span class="p">)</span>
+    <span class="n">pack</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
+        <span class="n">pack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pdf_output_dir</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">kickback_path</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_unpack</span><span class="p">,</span><span class="n">pack</span><span class="p">)</span></div>
+
+<span class="c1">#Get_from_pmcid multiprocessing version</span>
+<span class="c1">#Default 10 threads</span>
+<span class="c1">#faster than ghet_from_pmcid, but opens multiple windows    </span>
+<div class="viewcode-block" id="get_from_pmcid_mp"><a class="viewcode-back" href="../index.html#SHIP.get_from_pmcid_mp">[docs]</a><span class="k">def</span> <span class="nf">get_from_pmcid_mp</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_path</span><span class="p">,</span><span class="n">num_thread</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">pdf_output_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">pdf_output_dir</span><span class="p">)</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">PoolMP</span><span class="p">(</span><span class="n">num_thread</span><span class="p">)</span>
+    <span class="n">pack</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
+        <span class="n">pack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pdf_output_dir</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">kickback_path</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_unpack</span><span class="p">,</span><span class="n">pack</span><span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+<span class="c1"># trys to download from URLs that have previously failed</span>
+<div class="viewcode-block" id="_download_pdf_errors"><a class="viewcode-back" href="../index.html#SHIP._download_pdf_errors">[docs]</a><span class="k">def</span> <span class="nf">_download_pdf_errors</span><span class="p">(</span><span class="n">download_url</span><span class="p">,</span><span class="n">pmed_id</span><span class="p">,</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_dir</span><span class="p">):</span>
+    <span class="n">e404</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">kickback_dir</span><span class="o">+</span><span class="s2">&quot;error_404.txt&quot;</span><span class="p">,</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+    <span class="n">e403_ban</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">kickback_dir</span><span class="o">+</span><span class="s2">&quot;error_403_ipBan.txt&quot;</span><span class="p">,</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+    <span class="n">e403_rem</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">kickback_dir</span><span class="o">+</span><span class="s2">&quot;error_403_rem.txt&quot;</span><span class="p">,</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1">#assemble http request. PMC is sus if you don&#39;t have User-Agent header</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">#set agent to Internet-Explorer</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17&quot;</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">download_url</span><span class="p">,</span> <span class="n">headers</span> <span class="o">=</span> <span class="n">headers</span><span class="p">)</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;./&quot;</span><span class="o">+</span><span class="n">pdf_output_dir</span><span class="o">+</span><span class="n">pmed_id</span><span class="o">+</span><span class="s2">&quot;.pdf&quot;</span><span class="p">,</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="c1">#If there is an error 404 or error 403, then those IDs are written to a txt</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
+            <span class="n">e404</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">download_url</span><span class="p">[</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;PMC&quot;</span><span class="p">):</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;/pdf/&quot;</span><span class="p">)]</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pmed_id</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1">#PubMed Central Website bans batch downloading after a period of time</span>
+        <span class="c1">#If the computer&#39;s IP gets banned by PMC, all left over ID&#39;s are written to a txt</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">403</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;Internet connection (IP address) was used to download content in bulk&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">read</span><span class="p">()):</span>
+                <span class="n">e403_ban</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">download_url</span><span class="p">[</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;PMC&quot;</span><span class="p">):</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;/pdf/&quot;</span><span class="p">)]</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pmed_id</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">e403_rem</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">download_url</span><span class="p">[</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;PMC&quot;</span><span class="p">):</span><span class="n">download_url</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;/pdf/&quot;</span><span class="p">)]</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pmed_id</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">e404</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">e403_ban</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">e403_rem</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="k">def</span> <span class="nf">_unpack_error</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="n">_download_pdf_errors</span><span class="p">(</span><span class="s2">&quot;https://www.ncbi.nlm.nih.gov/pmc/articles/&quot;</span><span class="o">+</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;/pdf/&quot;</span><span class="p">,</span>
+                        <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span><span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">a</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+<span class="c1">#regular threaded function</span>
+<span class="c1">#deafult num threads is 2</span>
+<span class="c1">#function to name PDFs</span>
+<div class="viewcode-block" id="get_error"><a class="viewcode-back" href="../index.html#SHIP.get_error">[docs]</a><span class="k">def</span> <span class="nf">get_error</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_dir</span><span class="p">,</span><span class="n">num_thread</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="n">pdf_output_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">pdf_output_dir</span><span class="p">)</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">num_thread</span><span class="p">)</span>
+    <span class="n">pack</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
+        <span class="n">pack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pdf_output_dir</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">kickback_dir</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_unpack_error</span><span class="p">,</span><span class="n">pack</span><span class="p">)</span></div>
+
+<span class="c1">#multiprocessing version of get_error</span>
+<span class="c1">#default number of threads is 2</span>
+<div class="viewcode-block" id="get_error_mp"><a class="viewcode-back" href="../index.html#SHIP.get_error_mp">[docs]</a><span class="k">def</span> <span class="nf">get_error_mp</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="n">pdf_output_dir</span><span class="p">,</span><span class="n">kickback_dir</span><span class="p">,</span><span class="n">num_thread</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="n">pdf_output_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">pdf_output_dir</span><span class="p">)</span>
+    <span class="n">kickback_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">kickback_dir</span><span class="p">)</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">PoolMP</span><span class="p">(</span><span class="n">num_thread</span><span class="p">)</span>
+    <span class="n">pack</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">id_file_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
+        <span class="n">pack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">pdf_output_dir</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">kickback_dir</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_unpack_error</span><span class="p">,</span><span class="n">pack</span><span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+    
+<span class="sd">&quot;&quot;&quot;*************************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END PMC DOWLOAD FUNCTIONS&quot;&quot;&quot;</span>
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN MATERIALS SECTION PARSER FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;****************************************&quot;&quot;&quot;</span>
+
+<span class="c1"># these functions are no longer supported</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">def _extract_materials_section(pdf_path,output_path,sec_header_good,sec_header_bad):</span>
+<span class="sd">    f = open(output_path, &quot;w&quot;)</span>
+<span class="sd">    text= _convert_pdf_to_txt(pdf_path)</span>
+<span class="sd">    lineiterator = iter(text.splitlines())</span>
+<span class="sd">    for line in lineiterator:</span>
+<span class="sd">        if len(unicodedata.normalize(&quot;NFD&quot;,line.casefold()).replace(&quot;  &quot;,&quot; &quot;).strip()) &gt; 0:</span>
+<span class="sd">            if _any_rev(sec_header_good,unicodedata.normalize(&quot;NFD&quot;,line.casefold()).replace(&quot;  &quot;,&quot; &quot;)):</span>
+<span class="sd">                print(next(lineiterator))</span>
+<span class="sd">                for i in range(1000):</span>
+<span class="sd">                    l = next(lineiterator)</span>
+<span class="sd">                    print(l)</span>
+<span class="sd">                    if not _ny_rev(sec_header_bad,unicodedata.normalize(&quot;NFD&quot;,l.casefold()).replace(&quot;  &quot;,&quot; &quot;)):</span>
+<span class="sd">                        f.write(l+&quot;\n&quot;)</span>
+<span class="sd">                    else:  </span>
+<span class="sd">                        break</span>
+<span class="sd">                break</span>
+<span class="sd">    f.close()</span>
+
+<span class="sd">def _get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad):</span>
+<span class="sd">    pdf_dir = _clean_path(pdf_dir)</span>
+<span class="sd">    output_dir = _clean_path(output_dir)</span>
+<span class="sd">    for f in os.listdir(pdf_dir):</span>
+<span class="sd">        if f.endswith(&quot;.pdf&quot;):</span>
+<span class="sd">            print(pdf_dir+f)</span>
+<span class="sd">            _extract_materials_section(pdf_dir+f,output_dir+f.split(&quot;.pdf&quot;)[0]+&quot;.txt&quot;,sec_header_good,sec_header_bad)</span>
+
+<span class="sd">def _unpack_pdfextract(s):</span>
+<span class="sd">    a = s.split(&quot;,&quot;)</span>
+<span class="sd">    print(a[0])</span>
+<span class="sd">    extract_materials_section(a[0],a[1],a[2].split(&#39;$&#39;),a[3].split(&#39;$&#39;))</span>
+
+<span class="sd">def get_materials_folder(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):</span>
+<span class="sd">    pdf_dir = _clean_path(pdf_dir)</span>
+<span class="sd">    output_dir = _clean_path(output_dir)</span>
+<span class="sd">    pool = Pool(num_threads)</span>
+<span class="sd">    pack = []</span>
+<span class="sd">    for f in os.listdir(pdf_dir):</span>
+<span class="sd">        if f.endswith(&quot;.pdf&quot;):</span>
+<span class="sd">            pack.append(pdf_dir+f+&quot;,&quot;+output_dir+f.split(&quot;.pdf&quot;)[0]+&quot;.txt,&quot;+&#39;$&#39;.join(sec_header_good)+&quot;,&quot;+&#39;$&#39;.join(sec_header_bad))</span>
+<span class="sd">    results = pool.map(_unpack_pdfextract, pack,4)</span>
+
+<span class="sd">def get_materials_folder_mp(pdf_dir,output_dir,sec_header_good,sec_header_bad,num_threads=10):</span>
+<span class="sd">    pdf_dir = _clean_path(pdf_dir)</span>
+<span class="sd">    output_dir = _clean_path(output_dir)</span>
+<span class="sd">    pool = PoolMP(num_threads)</span>
+<span class="sd">    pack = []</span>
+<span class="sd">    for f in os.listdir(pdf_dir):</span>
+<span class="sd">        if f.endswith(&quot;.pdf&quot;):</span>
+<span class="sd">            pack.append(pdf_dir+f+&quot;,&quot;+output_dir+f.split(&quot;.pdf&quot;)[0]+&quot;.txt,&quot;+&#39;$&#39;.join(sec_header_good)+&quot;,&quot;+&#39;$&#39;.join(sec_header_bad))</span>
+<span class="sd">    results = pool.map(_unpack_pdfextract, pack,4)</span>
+<span class="sd">    pool.close()</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">&quot;&quot;&quot;**************************************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END MATERIALS SECTION PARSER FUNCTIONS&quot;&quot;&quot;</span>
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN SCIENCE-PARSE SERVER FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;*****************************&quot;&quot;&quot;</span>
+
+<span class="c1">#connects to the science-parse server</span>
+<span class="c1">#server is hosted locally on the machine</span>
+<span class="c1">#science-parse creates JSON files which contain the PDF contents seperated by section</span>
+<div class="viewcode-block" id="_post_science_parse"><a class="viewcode-back" href="../index.html#SHIP._post_science_parse">[docs]</a><span class="k">def</span> <span class="nf">_post_science_parse</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">a</span><span class="o">=</span><span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;http://localhost:8080/v1&#39;</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">f</span><span class="p">})</span>
+            <span class="nb">open</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;.json&#39;</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="c1">#prints an error if the PDF cannot be parsed</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span></div>
+<span class="c1">#gets JSON file from science parse server and saves it to directory</span>
+<div class="viewcode-block" id="get_pdf_json"><a class="viewcode-back" href="../index.html#SHIP.get_pdf_json">[docs]</a><span class="k">def</span> <span class="nf">get_pdf_json</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">,</span><span class="n">out_dir</span><span class="p">,</span><span class="n">num_thread</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="n">pdf_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">)</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">num_thread</span><span class="p">)</span>
+    <span class="n">pack</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">):</span>
+        <span class="n">pack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pdf_dir</span><span class="o">+</span><span class="n">line</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">out_dir</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_post_science_parse</span><span class="p">,</span><span class="n">pack</span><span class="p">)</span></div>
+    
+<span class="c1">#multiprocessing version of &quot;get_pdf_json&quot;</span>
+<span class="c1">#default number of threads = 2</span>
+<div class="viewcode-block" id="get_pdf_json_mp"><a class="viewcode-back" href="../index.html#SHIP.get_pdf_json_mp">[docs]</a><span class="k">def</span> <span class="nf">get_pdf_json_mp</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">,</span><span class="n">out_dir</span><span class="p">,</span><span class="n">num_thread</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="n">pdf_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">)</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">PoolMP</span><span class="p">(</span><span class="n">num_thread</span><span class="p">)</span>
+    <span class="n">pack</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">):</span>
+            <span class="n">pack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pdf_dir</span><span class="o">+</span><span class="n">line</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">out_dir</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_post_science_parse</span><span class="p">,</span><span class="n">pack</span><span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<span class="sd">&quot;&quot;&quot;***************************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END SCIENCE-PARSE SERVER FUNCTIONS&quot;&quot;&quot;</span>
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN JSON PARSING FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;****************************&quot;&quot;&quot;</span>
+
+<span class="c1"># takes folder of jsons generated by ScienceParse</span>
+<span class="c1"># puts jsons into csv formatted file for bkup</span>
+<span class="c1"># makes specfied modifcation to the json data and outputs to data csv</span>
+<div class="viewcode-block" id="run_json_folder"><a class="viewcode-back" href="../index.html#SHIP.run_json_folder">[docs]</a><span class="k">def</span> <span class="nf">run_json_folder</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span><span class="n">exclude_path</span><span class="p">,</span><span class="n">char_path</span><span class="p">,</span><span class="n">bkup_csv_path</span><span class="p">,</span><span class="n">csv_out_path</span><span class="p">):</span>
+	<span class="n">json_path</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">json_path</span><span class="p">)</span>
+
+	<span class="c1">#init sqlite db in memory</span>
+	<span class="c1">#sql db structure:</span>
+	<span class="c1">##Table: temp_table</span>
+	<span class="c1">###Columns: sec_head, text, id, sec_num, inferred, split_num upper_to_lower, digit_to_char, special_to_char</span>
+	<span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;:memory:&#39;</span><span class="p">)</span>
+	<span class="n">cur</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+	<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT, sec_num INT, split_num INT, inferred BIT, upper_to_lower FLOAT, digit_to_char FLOAT, special_to_char FLOAT);&#39;</span><span class="p">)</span>
+
+	<span class="c1">#go through json files and add their data to table</span>
+	<span class="k">for</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">json_path</span><span class="p">):</span>
+		<span class="n">file_path</span><span class="o">=</span><span class="n">json_path</span><span class="o">+</span><span class="n">file_path</span>
+		<span class="nb">print</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+		<span class="n">f</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+		<span class="n">c</span><span class="o">=</span><span class="mi">1</span>
+		<span class="c1">#add title and author entry to table</span>
+		<span class="k">if</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;title&#39;</span><span class="p">]:</span>
+			<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0, 0)&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="n">_clean_sql</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;title&#39;</span><span class="p">]),</span><span class="n">file_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.pdf.json&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">))</span>
+			<span class="n">c</span><span class="o">+=</span> <span class="mi">1</span>
+		<span class="k">if</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;authors&#39;</span><span class="p">]:</span>
+			<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0, 0)&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;authors&#39;</span><span class="p">,</span> <span class="n">_clean_sql</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;authors&#39;</span><span class="p">])),</span><span class="n">file_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.pdf.json&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">))</span>
+			<span class="n">c</span><span class="o">+=</span> <span class="mi">1</span>
+
+		<span class="k">if</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;sections&#39;</span><span class="p">]:</span>
+			<span class="k">for</span> <span class="n">sec</span> <span class="ow">in</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;sections&#39;</span><span class="p">]:</span>
+				<span class="n">text_clean</span> <span class="o">=</span> <span class="n">_clean_sql</span><span class="p">(</span><span class="n">sec</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;N IH -PA Author M anuscript</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;N IH -PA Author M anuscript&quot;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+				<span class="n">heading_clean</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+				<span class="k">if</span> <span class="n">sec</span><span class="p">[</span><span class="s1">&#39;heading&#39;</span><span class="p">]:</span>
+					<span class="n">heading_clean</span> <span class="o">=</span> <span class="n">_clean_sql</span><span class="p">(</span><span class="n">sec</span><span class="p">[</span><span class="s1">&#39;heading&#39;</span><span class="p">])</span>
+				<span class="k">else</span><span class="p">:</span>
+					<span class="n">heading_clean</span> <span class="o">=</span> <span class="s2">&quot;null&quot;</span>
+				<span class="n">cmd</span> <span class="o">=</span> <span class="s2">&quot;INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ? ,? )&quot;</span>
+				<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="p">(</span><span class="n">heading_clean</span><span class="p">,</span> <span class="n">text_clean</span><span class="p">,</span><span class="n">file_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.pdf.json&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">_upper_ratio</span><span class="p">(</span><span class="n">text_clean</span><span class="p">),</span><span class="n">_digit_ratio</span><span class="p">(</span><span class="n">text_clean</span><span class="p">),</span><span class="n">_special_ratio</span><span class="p">(</span><span class="n">text_clean</span><span class="p">)))</span>
+				<span class="n">c</span><span class="o">+=</span> <span class="mi">1</span>
+
+
+	
+	<span class="c1">#Dump unedited table into backup csv</span>
+	<span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="s1">&#39;SELECT * FROM temp_table ORDER BY id,sec_num,split_num&#39;</span><span class="p">,</span> <span class="n">con</span><span class="o">=</span><span class="n">conn</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">bkup_csv_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">sep</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="p">,</span><span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_NONNUMERIC</span><span class="p">)</span>
+
+	<span class="c1">#read unwanted headers from csv file</span>
+	<span class="n">re</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">exclude_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+	<span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">re</span><span class="p">:</span>
+		<span class="c1">#delete where section header like word in csv</span>
+		<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE from temp_table WHERE sec_head like &#39;%&quot;</span><span class="o">+</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;%&#39;;&quot;</span><span class="p">)</span>
+	<span class="c1">#remove all sections where the section text is less than certain length-- currently: 600 chars</span>
+	<span class="c1">#added catch for authors and title since they are most likely too short but still should be included</span>
+	<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE from temp_table WHERE length(text) &lt; 600 AND sec_head!=&#39;title&#39; AND sec_head !=&#39;authors&#39;;&quot;</span><span class="p">)</span>
+
+	<span class="c1">#defragment indexing</span>
+	<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM temp_table ORDER BY id,sec_num,split_num&quot;</span><span class="p">)</span>
+	<span class="n">rows</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+	<span class="n">cur_id</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+	<span class="n">c</span> <span class="o">=</span><span class="mi">1</span>
+	<span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">cur_id</span><span class="p">:</span>
+			<span class="n">cur_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+			<span class="n">c</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;UPDATE temp_table SET sec_num = ? WHERE sec_head = ? AND id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cur_id</span><span class="p">))</span>
+		<span class="n">c</span><span class="o">+=</span><span class="mi">1</span>
+	
+	<span class="c1">#go through and split up entries where the section text is longer than split_on characters</span>
+	<span class="c1">#select all entries with sec. text longer than split_on characters</span>
+	<span class="n">split_on</span> <span class="o">=</span> <span class="s2">&quot;3000&quot;</span>
+	<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;SELECT * FROM temp_table WHERE length(text) &gt; &#39;</span><span class="o">+</span><span class="n">split_on</span><span class="o">+</span><span class="s1">&#39; ORDER BY id,sec_num,split_num;&#39;</span><span class="p">)</span>
+
+	<span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">():</span>
+		<span class="c1">#split the sec. text of entry into split_on character chunks and interate</span>
+		<span class="n">bs</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+		<span class="n">c_split</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">[</span><span class="n">e</span><span class="o">+</span><span class="s2">&quot;. &quot;</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;. &quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">e</span><span class="p">]:</span>
+			<span class="c1">#insert chunk of text into table</span>
+			<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bs</span> <span class="o">+</span> <span class="n">s</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">split_on</span><span class="p">):</span>  
+				<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)&quot;</span><span class="p">,(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">bs</span><span class="p">,</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span><span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">c_split</span><span class="p">,</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span><span class="n">_upper_ratio</span><span class="p">(</span><span class="n">bs</span><span class="p">),</span><span class="n">_digit_ratio</span><span class="p">(</span><span class="n">bs</span><span class="p">),</span><span class="n">_special_ratio</span><span class="p">(</span><span class="n">bs</span><span class="p">)))</span>
+				<span class="n">c_split</span><span class="o">+=</span> <span class="mi">1</span>
+				<span class="n">bs</span> <span class="o">=</span> <span class="n">s</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">bs</span><span class="o">+=</span><span class="n">s</span>
+		<span class="c1">#remove old entry</span>
+		<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE from temp_table WHERE sec_head like ? AND id=? AND length(text)&gt;&quot;</span><span class="o">+</span><span class="n">split_on</span><span class="o">+</span><span class="s2">&quot;;&quot;</span><span class="p">,(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])))</span> 
+		
+	<span class="c1">##try to fix null headers</span>
+	<span class="c1">#get all rows with sec_head as null</span>
+	<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM temp_table WHERE sec_head like &#39;null&#39;&quot;</span><span class="p">)</span>
+	<span class="n">rows</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+	<span class="c1">#set variables with wider scope that names can persist</span>
+	<span class="n">cur_head</span> <span class="o">=</span> <span class="s1">&#39;null&#39;</span>
+	<span class="n">cur_id</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+	<span class="n">inf</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+		<span class="c1">#if new doc reset</span>
+		<span class="k">if</span> <span class="n">cur_id</span> <span class="o">!=</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
+			<span class="n">cur_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+			<span class="n">cur_head</span> <span class="o">=</span> <span class="s1">&#39;null&#39;</span>
+			<span class="n">inf</span><span class="o">=</span><span class="mi">0</span>
+		<span class="n">text</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+		<span class="c1">#if the first word is all caps it&#39;s probably a title</span>
+		<span class="c1">#check if all caps</span>
+		
+		<span class="k">if</span> <span class="p">(</span><span class="s1">&#39; &#39;</span> <span class="ow">in</span> <span class="n">text</span> <span class="ow">and</span> <span class="n">text</span><span class="p">[:</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="n">text</span><span class="p">[:</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">and</span> <span class="n">text</span><span class="p">[:</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()):</span>
+			<span class="n">a</span><span class="o">=</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+			<span class="n">c</span><span class="o">=</span><span class="mi">0</span>
+			<span class="n">bs</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+			<span class="c1">#read words until words are no longer all caps</span>
+			<span class="k">while</span><span class="p">(</span><span class="n">c</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">==</span><span class="n">a</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()):</span>
+				<span class="n">bs</span> <span class="o">+=</span> <span class="n">a</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot; &quot;</span>
+				<span class="n">c</span><span class="o">+=</span><span class="mi">1</span>
+			<span class="c1">#set to be header</span>
+			<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                            <span class="n">cur_head</span> <span class="o">=</span> <span class="n">bs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                            <span class="n">inf</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="c1">#open csv with characters that denote heading</span>
+			<span class="c1">#for each character see if that character comes before the end of the first sentence</span>
+			<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">char_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)):</span>
+				<span class="k">try</span><span class="p">:</span>
+					<span class="n">i</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+					<span class="c1">#check to see if text in this format</span>
+					<span class="c1">#Subheading in line: It is important that the character after the colon(or any char in csv) is captial. More text...</span>
+					<span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">&lt;</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">text</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">isupper</span><span class="p">()):</span>
+						<span class="n">cur_head</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span>
+						<span class="n">inf</span> <span class="o">=</span> <span class="mi">1</span> 
+				<span class="k">except</span><span class="p">:</span>
+					<span class="c1">#idk python</span>
+					<span class="n">s</span><span class="o">=</span><span class="s1">&#39;||-//&#39;</span>		
+		<span class="c1">#update entry in table with new sec_head and if that sec_head was inferred (i.e changed by this code block)</span>
+		<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;UPDATE temp_table SET sec_head = ?, inferred = ? WHERE sec_num = ? AND id = ? AND split_num = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">cur_head</span><span class="p">,</span> <span class="n">inf</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">]))</span>
+
+	<span class="c1">#delete entries based on text statistics</span>
+	<span class="c1">#the both constants are for when entries have both text stats greater than a given value</span>
+	<span class="n">both_upper</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span>
+	<span class="n">both_digit</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span>
+	<span class="c1">#for when just upper_to_lower is greater than certain ratio</span>
+	<span class="n">uppper</span> <span class="o">=</span> <span class="o">.</span><span class="mi">15</span>
+	<span class="c1">#for when just digit_to_char is greater than certain ratio</span>
+	<span class="n">digit</span> <span class="o">=</span> <span class="o">.</span><span class="mi">12</span>
+	<span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE from temp_table WHERE (upper_to_lower &gt; ? AND digit_to_char &gt; ?) OR upper_to_lower &gt; ? OR digit_to_char &gt; ?;&quot;</span><span class="p">,(</span><span class="n">both_upper</span><span class="p">,</span><span class="n">both_digit</span><span class="p">,</span><span class="n">uppper</span><span class="p">,</span><span class="n">digit</span><span class="p">))</span> 
+
+	<span class="c1">#get the remaining entries in the table and write them to csv</span>
+	<span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="s1">&#39;SELECT * FROM temp_table ORDER BY id,sec_num,split_num&#39;</span><span class="p">,</span> <span class="n">con</span><span class="o">=</span><span class="n">conn</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">csv_out_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">sep</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="p">,</span><span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_NONNUMERIC</span><span class="p">)</span> </div>
+
+
+<div class="viewcode-block" id="partition_jsons"><a class="viewcode-back" href="../index.html#SHIP.partition_jsons">[docs]</a><span class="k">def</span> <span class="nf">partition_jsons</span><span class="p">(</span><span class="n">json_dir</span><span class="p">,</span><span class="n">partition_dir</span><span class="p">,</span><span class="n">json_per_folder</span><span class="p">):</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">json_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">json_dir</span><span class="p">)]</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">curr_subdir</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">json_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">json_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">json_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+    
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+        <span class="c1"># create new subdir if necessary</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">json_per_folder</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">subdir_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">partition_dir</span><span class="p">,</span> <span class="n">name</span><span class="o">+</span><span class="s1">&#39;</span><span class="si">{0:04d}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="n">json_per_folder</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">subdir_name</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">subdir_name</span><span class="p">)</span>
+            <span class="n">curr_subdir</span> <span class="o">=</span> <span class="n">subdir_name</span>
+
+        <span class="c1"># move file to current dir</span>
+        <span class="n">f_base</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subdir_name</span><span class="p">,</span> <span class="n">f_base</span><span class="p">))</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="run_partition_folders"><a class="viewcode-back" href="../index.html#SHIP.run_partition_folders">[docs]</a><span class="k">def</span> <span class="nf">run_partition_folders</span><span class="p">(</span><span class="n">part_folder_dir</span><span class="p">,</span><span class="n">out_csv_dir</span><span class="p">,</span><span class="n">exclude_path</span><span class="p">,</span><span class="n">char_path</span><span class="p">,</span><span class="n">limit</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">out_csv_dir</span> <span class="o">=</span> <span class="n">_clean_path</span><span class="p">(</span><span class="n">out_csv_dir</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">part_folder_dir</span><span class="p">):</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">part_folder_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+        <span class="n">run_json_folder</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span><span class="n">exclude_path</span><span class="p">,</span><span class="n">char_path</span><span class="p">,</span><span class="n">out_csv_dir</span><span class="o">+</span><span class="n">f</span><span class="o">+</span><span class="s2">&quot;bkup.csv&quot;</span><span class="p">,</span><span class="n">out_csv_dir</span><span class="o">+</span><span class="n">f</span><span class="o">+</span><span class="s2">&quot;data.csv&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">limit</span><span class="o">&gt;</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">c</span><span class="o">&gt;=</span><span class="n">limit</span><span class="p">:</span>
+            <span class="k">break</span></div>
+
+<span class="sd">&quot;&quot;&quot;**************************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END JSON PARSING FUNCTIONS&quot;&quot;&quot;</span>
+
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN CSV PARSING FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;***************************&quot;&quot;&quot;</span>
+<span class="c1">#make list of PubMed ids from PubMed csv</span>
+<div class="viewcode-block" id="get_pmedid_csv"><a class="viewcode-back" href="../index.html#SHIP.get_pmedid_csv">[docs]</a><span class="k">def</span> <span class="nf">get_pmedid_csv</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span><span class="n">output_path</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvf</span><span class="p">:</span>
+        <span class="n">re</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvf</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">re</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<span class="c1">#Take PubMed csv at csv_file_path.</span>
+<span class="c1">#Make list of entries with PMCID format &quot;PMCID+PUBMEDID&quot; at pmc_path.</span>
+<span class="c1">#Make list of entries with no PMCID at nopmc_path.</span>
+<span class="k">def</span> <span class="nf">get_pmcid_csv</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span><span class="n">pmc_path</span><span class="p">,</span><span class="n">nopmc_path</span><span class="p">):</span>
+    <span class="n">pmc</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">pmc_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">nopmc</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">nopmc_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvf</span><span class="p">:</span>
+        <span class="n">re</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvf</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">re</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;PMCID:&quot;</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="mi">7</span><span class="p">]:</span>
+                <span class="n">pmc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;PMCID:&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">nopmc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">pmc</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">nopmc</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="c1">#Add PMCID to PUBMEDIDs in pmed_id_path txt.</span>
+<span class="c1">#Output results in format &quot;PMCID+PUBMEDID&quot; to output_path.</span>
+<div class="viewcode-block" id="csv_add_pcmid"><a class="viewcode-back" href="../index.html#SHIP.csv_add_pcmid">[docs]</a><span class="k">def</span> <span class="nf">csv_add_pcmid</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span><span class="n">pmed_id_path</span><span class="p">,</span><span class="n">output_path</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">pmed_id_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvf</span><span class="p">:</span>
+               <span class="n">re</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvf</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+               <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">re</span><span class="p">:</span>
+                   <span class="k">if</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span> <span class="ow">in</span> <span class="n">i</span><span class="p">):</span>
+                       <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;PMCID:&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;+&quot;</span><span class="o">+</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                       <span class="k">break</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="count_heads"><a class="viewcode-back" href="../index.html#SHIP.count_heads">[docs]</a><span class="k">def</span> <span class="nf">count_heads</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">):</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">seen</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">sort_inacessable_csv</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">good_out_path</span><span class="p">,</span> <span class="n">bad_out_path</span><span class="p">):</span>
+    <span class="n">good_pdf</span><span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">good_out_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">),</span><span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">bad_pdf</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">bad_out_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">),</span><span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvf</span><span class="p">:</span>
+        <span class="n">readCSV</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvf</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">readCSV</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;doi:&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="ow">and</span> <span class="s2">&quot;PMCID&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="mi">7</span><span class="p">]:</span>
+                <span class="n">bad_pdf</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">good_pdf</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+                
+<span class="c1"># Removes html content from csv file </span>
+<span class="k">def</span> <span class="nf">rem_html_csv</span><span class="p">(</span><span class="n">csv_in</span><span class="p">,</span><span class="n">csv_out</span><span class="p">):</span>
+    <span class="n">csvf</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">csv_in</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+    <span class="n">csvw</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">csv_out</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8-sig&#39;</span><span class="p">),</span><span class="n">lineterminator</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvf</span><span class="p">:</span>
+        <span class="n">br</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)):</span>
+            <span class="n">orig</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">bs</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;\/?(.*?)&gt;&#39;</span><span class="p">,</span><span class="s2">&quot; &quot;</span><span class="p">,</span><span class="n">row</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+            <span class="n">bs</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\[\[{(.*?)}\]\]&#39;</span><span class="p">,</span><span class="s2">&quot; &quot;</span><span class="p">,</span><span class="n">bs</span><span class="p">)</span>
+            <span class="n">bs</span> <span class="o">+=</span> <span class="s2">&quot; &quot;</span>
+            <span class="n">regs</span> <span class="o">=</span> <span class="p">[[</span><span class="sa">r</span><span class="s1">&#39;http(.*?)(\s)&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;&amp;(.*?)(\s|;)&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;\t* *\n&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;(\n{2,})&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;(\r{2,})&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;( {2,})&#39;</span><span class="p">,</span><span class="s1">&#39; &#39;</span><span class="p">]]</span>
+            <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">regs</span><span class="p">:</span>
+                <span class="n">bs</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">reg</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">reg</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">bs</span><span class="p">)</span>
+            <span class="n">br</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bs</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">orig</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">bs</span><span class="p">))</span>
+        <span class="n">br</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span>
+        <span class="n">csvw</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">br</span><span class="p">)</span>
+
+        
+<span class="c1"># Removes html content from xlsx file</span>
+<span class="k">def</span> <span class="nf">rem_html_xls</span><span class="p">(</span><span class="n">xls_in</span><span class="p">,</span><span class="n">csv_out</span><span class="p">):</span>
+    <span class="n">xlsf</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_excel</span><span class="p">(</span><span class="n">xls_in</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">,</span><span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">xlsf</span> <span class="o">=</span> <span class="n">xlsf</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">csvw</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">csv_out</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">,</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8-sig&#39;</span><span class="p">),</span><span class="n">lineterminator</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">xlsf</span><span class="o">.</span><span class="n">itertuples</span><span class="p">():</span>
+        <span class="n">br</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">),</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">orig</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">bs</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;\/?(.*?)&gt;&#39;</span><span class="p">,</span><span class="s2">&quot; &quot;</span><span class="p">,</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span><span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+            <span class="n">bs</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\[\[{(.*?)}\]\]&#39;</span><span class="p">,</span><span class="s2">&quot; &quot;</span><span class="p">,</span><span class="n">bs</span><span class="p">)</span>
+            <span class="n">bs</span> <span class="o">+=</span> <span class="s2">&quot; &quot;</span>
+            <span class="n">regs</span> <span class="o">=</span> <span class="p">[[</span><span class="sa">r</span><span class="s1">&#39;http(.*?)(\s)&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;&amp;(.*?)(\s|;)&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;\t* *\n&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;(\n{2,})&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;(\r{2,})&#39;</span><span class="p">,</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">],[</span><span class="sa">r</span><span class="s1">&#39;( {2,})&#39;</span><span class="p">,</span><span class="s1">&#39; &#39;</span><span class="p">]]</span>
+            <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">regs</span><span class="p">:</span>
+                <span class="n">bs</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">reg</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">reg</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">bs</span><span class="p">)</span>
+            <span class="n">br</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bs</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">orig</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">bs</span><span class="p">))</span>
+        <span class="n">br</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span>
+        <span class="n">csvw</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">br</span><span class="p">)</span>
+        
+<span class="sd">&quot;&quot;&quot;*************************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END CSV PARSING FUNCTIONS&quot;&quot;&quot;</span>
+
+
+<span class="sd">&quot;&quot;&quot;BEGIN UTILITY FUNCTIONS&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;***********************&quot;&quot;&quot;</span>
+
+<span class="c1">#Removes duplicate lines in txt file located at in_path</span>
+<span class="c1">#Outputs to out_path</span>
+<div class="viewcode-block" id="_remove_dupes_txt"><a class="viewcode-back" href="../index.html#SHIP._remove_dupes_txt">[docs]</a><span class="k">def</span> <span class="nf">_remove_dupes_txt</span><span class="p">(</span><span class="n">in_path</span><span class="p">,</span> <span class="n">out_path</span><span class="p">):</span>
+    <span class="n">lines_seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">outfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">in_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">line</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">lines_seen</span><span class="p">:</span>
+            <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+            <span class="n">lines_seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="n">outfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<span class="c1">#Counts the number of txts in id_txt_list.</span>
+<span class="c1">#Counts the number of pdfs in pdf_dir_list.</span>
+<span class="c1">#Returns the sum of pdf and txts: sum should equal 96961.</span>
+<span class="k">def</span> <span class="nf">get_count</span><span class="p">(</span><span class="n">id_txt_list</span><span class="p">,</span> <span class="n">pdf_dir_list</span><span class="p">):</span>
+    <span class="n">c</span><span class="o">=</span><span class="mi">0</span>
+    <span class="k">for</span> <span class="n">txt</span> <span class="ow">in</span> <span class="n">id_txt_list</span><span class="p">:</span>
+        <span class="n">c</span><span class="o">+=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">txt</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">pdf_dir_list</span><span class="p">:</span>
+        <span class="n">c</span><span class="o">+=</span><span class="nb">len</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">d</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">c</span>
+
+<span class="k">def</span> <span class="nf">_any_rev</span><span class="p">(</span><span class="n">array</span><span class="p">,</span><span class="n">string</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">array</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">string</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+<span class="c1">#uses PDFResource Manager tool to convert the PDF files to text</span>
+<span class="c1">#not used</span>
+<span class="k">def</span> <span class="nf">_convert_pdf_to_txt</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">rsrcmgr</span> <span class="o">=</span> <span class="n">PDFResourceManager</span><span class="p">()</span>
+    <span class="n">retstr</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">()</span>
+    <span class="n">codec</span> <span class="o">=</span> <span class="s1">&#39;utf-8&#39;</span>
+    <span class="n">laparams</span> <span class="o">=</span> <span class="n">LAParams</span><span class="p">()</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">TextConverter</span><span class="p">(</span><span class="n">rsrcmgr</span><span class="p">,</span> <span class="n">retstr</span><span class="p">,</span> <span class="n">codec</span><span class="o">=</span><span class="n">codec</span><span class="p">,</span> <span class="n">laparams</span><span class="o">=</span><span class="n">laparams</span><span class="p">)</span>
+    <span class="n">fp</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
+    <span class="n">interpreter</span> <span class="o">=</span> <span class="n">PDFPageInterpreter</span><span class="p">(</span><span class="n">rsrcmgr</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">maxpages</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">caching</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">pagenos</span><span class="o">=</span><span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">PDFPage</span><span class="o">.</span><span class="n">get_pages</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">pagenos</span><span class="p">,</span> <span class="n">maxpages</span><span class="o">=</span><span class="n">maxpages</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span><span class="n">caching</span><span class="o">=</span><span class="n">caching</span><span class="p">,</span> <span class="n">check_extractable</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">interpreter</span><span class="o">.</span><span class="n">process_page</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">retstr</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+    <span class="n">fp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">device</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">retstr</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">text</span>
+
+<span class="k">def</span> <span class="nf">rem_pmcid</span><span class="p">(</span><span class="n">in_path</span><span class="p">,</span><span class="n">out_path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">in_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">inF</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outF</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">inF</span><span class="p">:</span>
+                <span class="n">outF</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_split_every</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">n</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span> <span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">_clean_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">path</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">!=</span><span class="s2">&quot;/&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">path</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">path</span>
+
+<span class="k">def</span> <span class="nf">_clean_sql</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">i</span> <span class="k">if</span> <span class="nb">ord</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">128</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">s</span><span class="p">])</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span><span class="s1">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="s1">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">get_empty_files</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">,</span><span class="n">out_path</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">fsencode</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="n">f</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">st_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.pdf&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="c1">#sorts out the flies which do not have a DOI or PMCID</span>
+<span class="c1">#these files are unretrievable</span>
+<span class="k">def</span> <span class="nf">sort_nonretrievable</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">good_out_path</span><span class="p">,</span> <span class="n">bad_out_path</span><span class="p">):</span>
+    <span class="n">good_pdf</span><span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">good_out_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">bad_pdf</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">bad_out_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvf</span><span class="p">:</span>
+        <span class="n">readCSV</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvf</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">readCSV</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;doi:&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="ow">and</span> <span class="s2">&quot;PMCID&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="mi">7</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;BAD: &quot;</span><span class="o">+</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">])</span>
+                <span class="n">bad_pdf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;GOOD: &quot;</span><span class="o">+</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">])</span>
+                <span class="n">good_pdf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+        <span class="n">good_pdf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">bad_pdf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+<span class="k">def</span> <span class="nf">_txt_diff</span><span class="p">(</span><span class="n">txt1</span><span class="p">,</span><span class="n">txt2</span><span class="p">,</span><span class="n">out_txt</span><span class="p">):</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">txt1</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">txt2</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="nb">open</span><span class="p">(</span><span class="n">out_txt</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">t2</span><span class="p">)))</span>
+
+<span class="c1">#computes the ratio of uppercase letters to all characters</span>
+<span class="c1">#used to sort the parsed JSON sections </span>
+<div class="viewcode-block" id="_upper_ratio"><a class="viewcode-back" href="../index.html#SHIP._upper_ratio">[docs]</a><span class="k">def</span> <span class="nf">_upper_ratio</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;[A-Z]&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">))</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;[a-z]&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">u</span><span class="o">+</span><span class="n">l</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">u</span><span class="o">/</span><span class="p">(</span><span class="n">u</span><span class="o">+</span><span class="n">l</span><span class="p">)</span></div>
+<span class="c1">#computes the ratio of numerical characters to characters in a section of parsed PDF</span>
+<span class="c1">#used to sort sections that are not needed</span>
+<div class="viewcode-block" id="_digit_ratio"><a class="viewcode-back" href="../index.html#SHIP._digit_ratio">[docs]</a><span class="k">def</span> <span class="nf">_digit_ratio</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;[0-9]&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">))</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;[A-z]&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">c</span><span class="o">+</span><span class="n">d</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">d</span><span class="o">/</span><span class="p">(</span><span class="n">c</span><span class="o">+</span><span class="n">d</span><span class="p">)</span></div>
+
+
+<span class="c1">#computes the ratio of special characters to characters in a section of parsed PDF</span>
+<span class="k">def</span> <span class="nf">_special_ratio</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;[A-z]&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">))</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;[</span><span class="se">\\</span><span class="s1">.</span><span class="se">\\</span><span class="s1">!</span><span class="se">\\</span><span class="s1">@</span><span class="se">\\</span><span class="s1">#</span><span class="se">\\</span><span class="s1">$</span><span class="se">\\</span><span class="s1">%</span><span class="se">\\</span><span class="s1">^</span><span class="se">\\</span><span class="s1">&amp;</span><span class="se">\\</span><span class="s1">*</span><span class="se">\\</span><span class="s1">(</span><span class="se">\\</span><span class="s1">)</span><span class="se">\\</span><span class="s1">_</span><span class="se">\\</span><span class="s1">+</span><span class="se">\\</span><span class="s1">-</span><span class="se">\\</span><span class="s1">=]&#39;</span><span class="p">,</span><span class="n">s</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">c</span><span class="o">+</span><span class="n">s</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">s</span><span class="o">/</span><span class="p">(</span><span class="n">c</span><span class="o">+</span><span class="n">s</span><span class="p">)</span>
+
+<span class="sd">&quot;&quot;&quot;*********************&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;END UTILITY FUNCTIONS&quot;&quot;&quot;</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">freeze_support</span><span class="p">()</span>
+    <span class="c1">#xls_rem_html(&quot;C:\\Users\\jnt11\\Documents\\Copy_of_staff_profiles_from_john.xlsx&quot;,&quot;C:\\Users\\jnt11\\Downloads\\staff_profiles_no_html.csv&quot;,)</span>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2018, Jonah Tash and Pavan Bhat.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.6.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>SHIP 2018 &#8212; SHIP 0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="_static/js/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="_static/js/jquery-fix.js"></script>
+    <script type="text/javascript" src="_static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="_static/bootstrap-sphinx.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          SHIP</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"></ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">SHIP 2018</a><ul>
+<li><a class="reference internal" href="#currently-available-utilities">Currently available utilities</a></li>
+<li><a class="reference internal" href="#example-usage">Example Usage</a><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#get-a-csv-from-pubmed">Get a CSV from PubMed</a></li>
+<li><a class="reference internal" href="#what-to-use-in-ship-2018">What to use in SHIP 2018</a><ul>
+<li><a class="reference internal" href="#lets-go">Lets Go!</a></li>
+<li><a class="reference internal" href="#pdf-processing">PDF Processing</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#summary">Summary</a></li>
+<li><a class="reference internal" href="#some-final-notes">Some final notes:</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#adding-a-journal-site">Adding a Journal Site</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="_sources/README.md.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-12 content">
+      
+  <div class="section" id="ship-2018">
+<span id="ship-2018"></span><h1>SHIP 2018<a class="headerlink" href="#ship-2018" title="Permalink to this headline">¶</a></h1>
+<p>SHIP 2018 contains utilities to batch assemble databases of scientific articles and parse article contents.</p>
+<div class="section" id="currently-available-utilities">
+<span id="currently-available-utilities"></span><h2>Currently available utilities<a class="headerlink" href="#currently-available-utilities" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Automated PDF downloading from PubMed ids</li>
+<li>Automated PDF downloading from PMC  ids</li>
+<li>Retrieving journal domain name from PubMed id</li>
+<li>Extraction of article sections from PDFs using Science-Parse</li>
+<li>File folder partitioning for Science-Parse JSONs</li>
+<li>PubMed CSV parsing utilities</li>
+<li>Miscellaneous related functions</li>
+</ul>
+</div>
+<div class="section" id="example-usage">
+<span id="example-usage"></span><h2>Example Usage<a class="headerlink" href="#example-usage" title="Permalink to this headline">¶</a></h2>
+<p>From start to finish here is how one can download and process articles from a given PubMed search. <a class="reference external" href="#tldr">Summary</a> at the bottom.</p>
+<div class="section" id="dependencies">
+<span id="dependencies"></span><h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="https://www.ruby-lang.org/en/downloads/">Install Ruby</a>, then run:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span><span class="n">python</span> <span class="n">setup</span><span class="p">.</span><span class="n">py</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="get-a-csv-from-pubmed">
+<span id="get-a-csv-from-pubmed"></span><h3>Get a CSV from PubMed<a class="headerlink" href="#get-a-csv-from-pubmed" title="Permalink to this headline">¶</a></h3>
+<p>Search for something on the PubMed website, in this example we search for the phrase “engineering biology”</p>
+<p><img src="https://raw.githubusercontent.com/jonahtash/SHIP2018/master/img/pmed.png" width="700"></p>
+<p>After searching select “Send To” &gt; “File” &gt; Format: CSV and press “Create File.” You should now have a .csv file called pubmed_result.csv. You are now ready to use SHIP 2018 to fetch and process the PDFs for the articles you searched for.</p>
+</div>
+<div class="section" id="what-to-use-in-ship-2018">
+<span id="what-to-use-in-ship-2018"></span><h3>What to use in SHIP 2018<a class="headerlink" href="#what-to-use-in-ship-2018" title="Permalink to this headline">¶</a></h3>
+<p>You’re going to be collecting a lot of files while using SHIP 2018 (it’s a batch downloader after all) so we recommend u use the following file structure just to keep things organized.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>./
+├── SHIP.py
+├── pdfetch.rb
+├── pubmedid2pdf.rb
+├── torun/
+    └──id_lists_here
+├── inaccessible/
+    └──id_lists_here
+├── pdf/
+    └──article_pdfs_here
+├── data/
+    └──material_sec_csvs_here
+└── json/
+    └──science_parse_jsons_here
+</pre></div>
+</div>
+<p>You’ll see what everything is for as we go along.</p>
+<div class="section" id="lets-go">
+<span id="lets-go"></span><h4>Lets Go!<a class="headerlink" href="#lets-go" title="Permalink to this headline">¶</a></h4>
+<p>The first to do is remove any articles that don’t have any external links. There may be a way to retrieve the articles,  that way just doesn’t involve SHIP 2018. Run:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sort_inacessable_csv</span><span class="p">(</span><span class="s2">&quot;pubmed_result.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;torun/pubmed_result.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;inacessable/pubmed_inacessable.csv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now you’re going to want to split the ids in the csv like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">get_pmcid_csv</span><span class="p">(</span><span class="s2">&quot;torun/pubmed_result.csv&quot;</span><span class="p">,</span><span class="s2">&quot;torun/ids_pmc.txt&quot;</span><span class="p">,</span><span class="s2">&quot;torun/ids_pmed.txt&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will make two ids list txts. One txt will be formatted correctly to download PDFs from the PMC and we will use the other list to interface with the Ruby script.</p>
+<p>You are now going to want to run the PMC id list. <strong>NOTE: VERY IMPORTANT!!!!</strong> DO NOT,  use this next function without permission from NIH. It is a copyright violation to do so and your IP will be banned from the PMC website (but mainly its illegal). The developers of SHIP 2018 assume no liability and are not responsible for any misuse or
+damage caused by this program. If you do have permission from NIH to batch download in this fashion run:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">get_error_mp</span><span class="p">(</span><span class="s2">&quot;torun/ids_pmc.txt&quot;</span><span class="p">,</span><span class="s2">&quot;pdf/&quot;</span><span class="p">,</span><span class="s2">&quot;inacessable/&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In the event that there are ids in <code class="docutils literal notranslate"><span class="pre">inacessable/error_403_ipBan.txt</span></code>
+which there shouldn’t be because you recieved the proper permissions from NIH. However if for <em>some</em> reason there are ids in this file replace <code class="docutils literal notranslate"><span class="pre">torun/ids_pmc.txt</span></code> with this file  and delete the original and rerun <code class="docutils literal notranslate"><span class="pre">get_error_mp</span></code> like before until there no longer ids in the <code class="docutils literal notranslate"><span class="pre">inacessable/error_403_ipBan.txt</span></code>. You might have to do this from a machine with a different IP, for, uhhhh, reasons. Not that you would ever have this problem however.</p>
+<p>Next you want to run the PubMed id list. In order for this next function you will need Ruby. Then run:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">run_id_ruby_mp</span><span class="p">(</span><span class="s2">&quot;torun/ids_pmed.txt&quot;</span><span class="p">,</span><span class="s2">&quot;inacessable/inacessable_pmed.txt&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You will now have every article pdf from your original csv that SHIP 2018 is capable of retrieving.</p>
+</div>
+<div class="section" id="pdf-processing">
+<span id="pdf-processing"></span><h4>PDF Processing<a class="headerlink" href="#pdf-processing" title="Permalink to this headline">¶</a></h4>
+<p>First run your PDFs through <a class="reference external" href="https://github.com/allenai/science-parse">Science-Parse</a>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span><span class="n">java</span> <span class="o">-</span><span class="n">jar</span> <span class="n">cli</span><span class="o">-</span><span class="n">assembly</span><span class="p">.</span><span class="n">jar</span> <span class="o">-</span><span class="n">o</span> <span class="n">json</span><span class="o">/</span> <span class="n">pdf</span><span class="o">/</span>
+</pre></div>
+</div>
+<p>Now extract the material sections from the PDFs into csv</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">run_json_folder</span><span class="p">(</span><span class="s2">&quot;json/&quot;</span><span class="p">,</span><span class="s2">&quot;exclude.csv&quot;</span><span class="p">,</span><span class="s2">&quot;chars.csv&quot;</span><span class="p">,</span><span class="s2">&quot;data/bkup.csv&quot;</span><span class="p">,</span><span class="s2">&quot;data.csv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>That’s all it takes! You now have a .csv file that contains the materials section of each PDF file for (<em>almost</em>) every article in a given PubMed search as well as a PDF file for every article retrieved.</p>
+<div id=tldr></div>
+</div>
+<div class="section" id="summary">
+<span id="summary"></span><h3>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sort_inacessable_csv</span><span class="p">(</span><span class="s2">&quot;pubmed_result.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;torun/pubmed_result.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;inacessable/pubmed_inacessable.csv&quot;</span><span class="p">)</span>
+
+<span class="c1"># Only run this program if you have permission from NIH</span>
+<span class="n">get_pmcid_csv</span><span class="p">(</span><span class="s2">&quot;torun/pubmed_result.csv&quot;</span><span class="p">,</span><span class="s2">&quot;torun/ids_pmc.txt&quot;</span><span class="p">,</span><span class="s2">&quot;torun/ids_pmed.txt&quot;</span><span class="p">)</span>
+
+<span class="c1"># Generate JSONs in ./json/ using Science-Parse</span>
+
+<span class="n">run_id_ruby_mp</span><span class="p">(</span><span class="s2">&quot;torun/ids_pmed.txt&quot;</span><span class="p">,</span><span class="s2">&quot;inacessable/inacessable_pmed.txt&quot;</span><span class="p">)</span>
+
+<span class="n">run_json_folder</span><span class="p">(</span><span class="s2">&quot;json/&quot;</span><span class="p">,</span><span class="s2">&quot;exclude.csv&quot;</span><span class="p">,</span><span class="s2">&quot;chars.csv&quot;</span><span class="p">,</span><span class="s2">&quot;data/bkup.csv&quot;</span><span class="p">,</span><span class="s2">&quot;data.csv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="some-final-notes">
+<span id="some-final-notes"></span><h3>Some final notes:<a class="headerlink" href="#some-final-notes" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><strong>Why are there so few PDFs?</strong> There are certain situations in which SHIP 2018 will not be able to retrieve a PDF<ul>
+<li>The PubMeb entry has neither a DOI nor a PMC id</li>
+<li>PubMed or PMC gives an error 404 or 403 file removed error for a given id</li>
+<li>The journal site requires a site subscription that you do not have</li>
+<li>The article is on a journal site that is not supported- see <a class="reference external" href="#adding">Adding a Journal Site</a></li>
+</ul>
+</li>
+<li><strong>Partioning JSONs</strong> The dataset of article PDFs that you assemble using SHIP 2018 is liable to be VERY large. If this is the case you may want to first partition your Science-Parse json folder and then generate a csv for each partition folder:</li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="n">partition_jsons</span><span class="p">(</span><span class="s2">&quot;json/&quot;</span><span class="p">,</span><span class="s2">&quot;jsonpart/&quot;</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+
+<span class="n">run_partition_folders</span><span class="p">(</span><span class="s2">&quot;jsonpart/&quot;</span><span class="p">,</span><span class="s2">&quot;data/&quot;</span><span class="p">,</span><span class="s2">&quot;exclude.csv&quot;</span><span class="p">,</span><span class="s2">&quot;chars.csv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div id=adding></div>
+</div>
+<div class="section" id="adding-a-journal-site">
+<span id="adding-a-journal-site"></span><h2>Adding a Journal Site<a class="headerlink" href="#adding-a-journal-site" title="Permalink to this headline">¶</a></h2>
+<p>SHIP 2018 uses a modified version of <a class="reference external" href="https://github.com/billgreenwald/Pubmed-Batch-Download/tree/master/ruby_version">Pubmed-Batch-Download</a>. This program follows the DOI link for an article and tries to download the PDF for that article by clicking on the download link based on the format of various popular journal sites, Springer Link, Science Direct, etc. All journal sites currently supported are listed in <code class="docutils literal notranslate"><span class="pre">pdfetch.rb</span></code>. You can increase your article yield by adding support for currently unsupported journal sites. A handy utility for doing this is available in SHIP 2018:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="n">sort_url_mp</span><span class="p">(</span><span class="s2">&quot;torun/ids_pmed.txt&quot;</span><span class="p">,</span><span class="s2">&quot;torun/journal_domains.csv&quot;</span><span class="p">)</span>
+
+<span class="n">count_domain</span><span class="p">(</span><span class="s2">&quot;torun/journal_domains.csv&quot;</span><span class="p">,</span><span class="s2">&quot;torun/journal_domains_count.csv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will create two .csv files. One, <code class="docutils literal notranslate"><span class="pre">journal_domains.csv</span></code> will contain the journal site domain for each PubMed id in <code class="docutils literal notranslate"><span class="pre">ids_pmed.txt</span></code>. <code class="docutils literal notranslate"><span class="pre">journal_domains_count.csv</span></code> will list each domain alongside how articles are located under that domain. This way you can determine which unsupported journal sites will give you the highest yield increase. Once you have determined which sites you plan to add support for you will need to add finders to <code class="docutils literal notranslate"><span class="pre">pdfetch.rb</span></code>. Model your new finders off of the ones already in the script. Additionally since SHIP 2018 has been developed, Pubmed-Batch-Download has been ported to Python so it might be best to write all new finders for that new program.</p>
+<blockquote>
+<div>Written by Jonah Tash and Pavan Bhat</div></blockquote>
+</div>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2018, Jonah Tash and Pavan Bhat.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.6.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

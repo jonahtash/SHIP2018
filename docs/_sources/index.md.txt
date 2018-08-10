@@ -1,0 +1,47 @@
+<br />
+<br />
+<br />
+
+# Welcome to the SHIP 2018 Module documentation!
+
+This Python module was developed to provide resources 
+
+```eval rst
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+.. automodule:: SHIP
+
+.. autofunction:: SHIP.run_id_ruby
+Run ruby script on list of ids at *file_path* and output failed ids to *kickback_loc*. Optional num_threads number of threads to run: default 10
+
+
+.. autofunction:: get_pmedid_csv
+Make list of PubMed ids from PubMed csv
+
+
+.. autofunction:: get_pmcid_csv
+Take PubMed csv at *csv_file_path*. Make list of entries with PMCID format "PMCID+PUBMEDID" at *pmc_path*. Make list of entries with no PMCID at *nopmc_path*.
+
+
+
+.. autofunction:: get_from_pmcid
+PREREQ: id file in format "PMCID+PUBMEDID".
+Download pdfs of entries in txt at *id_file_path*. Downloads pdfs to *pdf_output_dir*. Output failed downloads to *kickback_path*.
+
+
+.. autofunction:: get_count
+Counts the number of txts in *id_txt_list*. Counts the number of pdfs in *pdf_dir_list*. Returns the sum of pdf and txts: sum should equal 96961.
+
+
+.. autofunction:: csv_add_pcmid
+Add PMCID to PUBMEDIDs in *pmed_id_path* txt. Output results in format "PMCID+PUBMEDID" to *output_path*.
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+```
