@@ -36,7 +36,6 @@ Camping.goes :Pdfetch
 class Reprint < Mechanize::File
   # empty class to use as Mechanize pluggable parser for pdf files
 end
-
 class Fetch
   
   def useSocks(server,port)
@@ -59,12 +58,23 @@ class Fetch
         m.pluggable_parser.pdf = Reprint
         begin
           p = m.get(@uri)
+		  warn "here"
           @uri = p.uri
-        rescue Timeout::Error
-          warn "Timed out trying to connect to #{@uri}"
+        rescue => error
+		warn error.message
+          warn error.backtrace
+		m.shutdown
+        m = Mechanize.new { |agent| agent.user_agent_alias = 'Windows Chrome'}
+        m = Mechanize.new { |a| a.keep_alive = 1 }
+		m.request_headers = {'user-agent' => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"}
+        # set the mechanize pluggable parser for pdf files to the empty class Reprint, as a way to check for it later
+        m.pluggable_parser.pdf = Reprint
         end
+
+
         finders = Pdfetch::Finders.new
         # loop through all finders until it finds one that return the pdf reprint
+
         for finder in finders.public_methods(false).sort
           warn "Trying #{finder.to_sym}"
            break if page = finders.send(finder.to_sym, m,p)

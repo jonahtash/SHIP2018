@@ -575,20 +575,24 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 	###Columns: sec_head, text, id, sec_num, inferred, split_num upper_to_lower, digit_to_char, special_to_char
 	conn = sqlite3.connect(':memory:')
 	cur = conn.cursor()
-	cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT, sec_num INT, split_num INT, inferred BIT, upper_to_lower FLOAT, digit_to_char FLOAT, special_to_char FLOAT);')
-
+	cur.execute('CREATE TABLE temp_table (sec_head varchar(255), text TEXT, id INT, sec_num INT, split_num INT, inferred BIT, upper_to_lower FLOAT, digit_to_char FLOAT, special_to_char FLOAT, title TEXT, combined_id TEXT);')
+        title = ""
 	#go through json files and add their data to table
 	for file_path in os.listdir(json_path):
 		file_path=json_path+file_path
 		print(file_path)
 		f = json.load(open(file_path,'r',encoding='utf-8'))
 		c=1
+		doc = file_path.split('/')[-1].split('.pdf.json')[0]
 		#add title and author entry to table
 		if f['metadata']['title']:
-			cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0, 0)", ('title', _clean_sql(f['metadata']['title']),file_path.split('/')[-1].split('.pdf.json')[0],c))
+                        title = f['metadata']['title']
+			cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0, 0, ?, ?)", ('title', _clean_sql(f['metadata']['title']),doc,c, title,
+                                                                                                        '{}_head_{}_sec_{}_num_{}_inf_{}'.format(doc, 'title', c, 1, 0)))
 			c+= 1
 		if f['metadata']['authors']:
-			cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0, 0)", ('authors', _clean_sql(str(f['metadata']['authors'])),file_path.split('/')[-1].split('.pdf.json')[0],c))
+			cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, 1, 0, 0, 0, 0, ?, ?)", ('authors', _clean_sql(str(f['metadata']['authors'])),doc,c, title,
+                                                                                                        '{}_head_{}_sec_{}_num_{}_inf_{}'.format(doc, 'authors', c, 1, 0)))
 			c+= 1
 
 		if f['metadata']['sections']:
@@ -599,8 +603,9 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 					heading_clean = _clean_sql(sec['heading'])
 				else:
 					heading_clean = "null"
-				cmd = "INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ? ,? )"
-				cur.execute(cmd, (heading_clean, text_clean,file_path.split('/')[-1].split('.pdf.json')[0],c,1,0,_upper_ratio(text_clean),_digit_ratio(text_clean),_special_ratio(text_clean)))
+				cmd = "INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ? ,?, ?, ?)"
+				cur.execute(cmd, (heading_clean, text_clean, doc,c,1,0,_upper_ratio(text_clean),_digit_ratio(text_clean),_special_ratio(text_clean), title
+                                                  '{}_head_{}_sec_{}_num_{}_inf_{}'.format(doc, heading_clean, c, 1, 0)))
 				c+= 1
 
 
@@ -641,7 +646,8 @@ def run_json_folder(json_path,exclude_path,char_path,bkup_csv_path,csv_out_path)
 		for s in [e+". " for e in row[1].split(". ") if e]:
 			#insert chunk of text into table
 			if len(bs + s) > int(split_on):  
-				cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",(row[0],bs,str(row[2]),row[3],c_split,row[5],_upper_ratio(bs),_digit_ratio(bs),_special_ratio(bs)))
+				cur.execute("INSERT INTO temp_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",(row[0],bs,str(row[2]),row[3],c_split,row[5],_upper_ratio(bs),_digit_ratio(bs),_special_ratio(bs), row[9]
+                                                                                                               '{}_head_{}_sec_{}_num_{}_inf_{}'.format(doc, str(row[2]), row[3], c_split, row[5])))
 				c_split+= 1
 				bs = s
 			else:
@@ -797,8 +803,8 @@ def count_heads(csv_file_path):
     return len(seen)
 
 def sort_inacessable_csv(csv_file_path, good_out_path, bad_out_path):
-    good_pdf= csv.writer(open(good_out_path, 'w'),lineterminator="\n")
-    bad_pdf = csv.writer(open(bad_out_path, 'w'),lineterminator="\n")
+    good_pdf= csv.writer(open(good_out_path, 'w', encoding='utf-8'),lineterminator="\n")
+    bad_pdf = csv.writer(open(bad_out_path, 'w', encoding='utf-8'),lineterminator="\n")
     with open(csv_file_path, encoding='utf-8') as csvf:
         readCSV = csv.reader(csvf, delimiter=',')
         for row in readCSV:
@@ -995,5 +1001,4 @@ def _special_ratio(s):
 
 if __name__ == '__main__':
     freeze_support()
-    #xls_rem_html("C:\\Users\\jnt11\\Documents\\Copy_of_staff_profiles_from_john.xlsx","C:\\Users\\jnt11\\Downloads\\staff_profiles_no_html.csv",)
-    get_abstracts_mp("C:\\Users\\jnt11\\Documents\\GitHub\\SHIPGUI\\nature_ids.txt",'nature_abstract2.csv',num_threads=15)
+    get_error_mp("torun/ids_pmc.txt","pdf/","norun/")
